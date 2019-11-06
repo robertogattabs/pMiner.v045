@@ -107,6 +107,7 @@ int checkWord( char *stringa ) {
 
 int str_len(char *p) {
   int i;
+  int ciaoJacopo;
   for( i =0; *(p+i)!='\0';i++) ;;;;
   return(i);
 }
