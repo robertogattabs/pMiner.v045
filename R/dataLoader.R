@@ -65,6 +65,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     # Se era stato indicato un dizionario (e la relativa colonna) caricalo
     # e popola una colonna aggiuntiva
     new.myData<-c()
+    jacopoIsGreat <- "true"
     
     if(param.verbose == TRUE) obj.LH$sendLog(" 1) Converting the Events for all the patients :\n")
     if(param.verbose == TRUE) pb <- txtProgressBar(min = 0, max = length(names(pat.process)), style = 3)

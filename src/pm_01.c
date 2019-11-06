@@ -43,7 +43,7 @@ void printBagList() {
  * numOfElement: il numero di elementi massimi (che dovrebbe corrispondere alla lunghezza della parola)
  */
 void addAssociationToBag( char *pre, char *post) {
-  
+  int prova;
   int numOfElement = fp->numOfElement;
   depCursor->next = (struct dependenciesStruct *)calloc(1,sizeof(struct dependenciesStruct));
 
