@@ -244,7 +244,6 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
       wrklst$fromRow <- NA
       wrklst$toRow <- NA
       eventsInPath <- c()
-      
       # Riproduci il calcolo, fra gli stati 'from' e 'to' 
       for(riga in seq(1,nrow(x))) {
         
@@ -274,6 +273,9 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
       }
       # ora verifica se le transizioni soddisfano le condizioni dei parametri in ingresso
       possibleCandidate <- TRUE
+      # if (is.na(wrklst$toRow)) {
+      #   possibleCandidate <- FALSE
+      # }
       ultimoStato <- x[ nrow(x) , MM.csv.parameters[["csv.EVENTName"]] ]
       if( !is.na(wrklst$fromRow) & !is.na(wrklst$toRow)  ) {
         # browser()
