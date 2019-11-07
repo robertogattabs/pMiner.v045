@@ -273,9 +273,9 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
       }
       # ora verifica se le transizioni soddisfano le condizioni dei parametri in ingresso
       possibleCandidate <- TRUE
-      # if (is.na(wrklst$toRow)) {
-      #   possibleCandidate <- FALSE
-      # }
+      if (is.na(wrklst$toRow)) {
+        possibleCandidate <- FALSE
+      }
       ultimoStato <- x[ nrow(x) , MM.csv.parameters[["csv.EVENTName"]] ]
       if( !is.na(wrklst$fromRow) & !is.na(wrklst$toRow)  ) {
         # browser()
