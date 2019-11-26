@@ -469,9 +469,11 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       stati.da.uppgradare <- str_replace_all(st.ACTIVE [ !(st.ACTIVE %in% c("'BEGIN'","'END")) ],"'", "")
       stati.da.resettare <- lista.stati.possibili[ !(lista.stati.possibili %in% stati.da.uppgradare) ]
       st.ACTIVE.time [ stati.da.resettare ] <- 0
+      
+      # browser()
       # ORA scorri i giorni che passano fra l'evento precedente e quello in esame
       # Va fatto PRIMA di attivare il controllo sull'effetto dell'evento
-      if( indice.di.sequenza > 1 ) {
+      if( indice.di.sequenza > 1 & indice.di.sequenza < 1 ) {
 
         data.iniziale <- matriceSequenza[ ,col.dateName ][ indice.di.sequenza - 1 ]
         data.finale <- matriceSequenza[ ,col.dateName ][ indice.di.sequenza ]
@@ -559,7 +561,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
             st.ACTIVE.time [ stati.da.resettare ] <- 0
         }
       }
-
+      # browser()
       # Azzera il tempo di eventuali stati che sono stati resettati
       stati.da.uppgradare <- str_replace_all(st.ACTIVE [ !(st.ACTIVE %in% c("'BEGIN'","'END")) ],"'", "")
       stati.da.resettare <- lista.stati.possibili[ !(lista.stati.possibili %in% stati.da.uppgradare) ]
@@ -788,13 +790,13 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
     # Frulla per ogni possibile trigger, verificando se si puo' attivare
     for( trigger.name in names(WF.struct[[ "info" ]][[ "trigger" ]]) ) {
-
+# browser()
       # if( trigger.name == "Localization high?" & ev.NOW=="Site_localization" ) browser() 
       # Prendi la condizione
       precondizione <- WF.struct[["info"]][["trigger"]][[trigger.name]]$condition
       stringa.to.eval<-precondizione
       
-      if(debug == TRUE) cat("\n condition: ",stringa.to.eval)
+      if(debug == TRUE) cat("\n\t condition: ",stringa.to.eval)
 
       # Agisci solo nel caso in cui una CONDITION sia stata definita,
       # per quel trigger (alcuni trigger potrebbero NON avere una CONDITION)
@@ -831,11 +833,13 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
             riga.completa.EventLog = riga.completa.EventLog)
 
           # Fai il parse sui DELTA T
-          stringa.to.eval <- parse.for.temporal.conditions(
-                                    stringa = stringa.to.eval,
-                                    st.ACTIVE.time = st.ACTIVE.time,
-                                    st.ACTIVE.time.cum = st.ACTIVE.time.cum,
-                                    UM = UM)
+          # -im
+          # stringa.to.eval <- parse.for.temporal.conditions(
+          #                           stringa = stringa.to.eval,
+          #                           st.ACTIVE.time = st.ACTIVE.time,
+          #                           st.ACTIVE.time.cum = st.ACTIVE.time.cum,
+          #                           UM = UM)
+          # -fm
 
           # Parsa la stringa
           if(stringa.to.eval=="") risultato <- TRUE
@@ -885,7 +889,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
       }
     }
-
+# browser()
     # Se esista la tabella, verifica i conflitti di set/unset
     if(!is.null(tabella.set.unset)) {
 
