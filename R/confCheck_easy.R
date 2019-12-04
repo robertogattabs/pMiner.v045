@@ -165,6 +165,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       arr.set<- xpathApply(WF.xml,paste(c('//xml/workflow/trigger[@name="',trigger.name,'"]/set'),collapse = ""),xmlValue)
       arr.unset<- xpathApply(WF.xml,paste(c('//xml/workflow/trigger[@name="',trigger.name,'"]/unset'),collapse = ""),xmlValue)
       arr.unsetAll<- xpathApply(WF.xml,paste(c('//xml/workflow/trigger[@name="',trigger.name,'"]/unsetAll'),collapse = ""),xmlValue)
+      arr.hset<- xpathApply(WF.xml,paste(c('//xml/workflow/trigger[@name="',trigger.name,'"]/hset'),collapse = ""),xmlValue)
+      arr.hunset<- xpathApply(WF.xml,paste(c('//xml/workflow/trigger[@name="',trigger.name,'"]/hunset'),collapse = ""),xmlValue)
       pri<- xpathApply(WF.xml,paste(c('//xml/workflow/trigger[@name="',trigger.name,'"]'),collapse = ""),xmlGetAttr,"pri")[[1]]
       st.col<- xpathApply(WF.xml,paste(c('//xml/workflow/trigger[@name="',trigger.name,'"]'),collapse = ""),xmlGetAttr,"col")[[1]]
       
@@ -209,6 +211,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       lista.trigger[[ trigger.name ]]<-list()
       lista.trigger[[ trigger.name ]][["condition"]]<-condizione
       lista.trigger[[ trigger.name ]][["set"]]<-arr.set
+      lista.trigger[[ trigger.name ]][["hset"]]<-arr.hset
+      lista.trigger[[ trigger.name ]][["hunset"]]<-arr.hunset
       lista.trigger[[ trigger.name ]][["pri"]]<-pri
       lista.trigger[[ trigger.name ]][["unset"]]<-arr.unset
       lista.trigger[[ trigger.name ]][["unsetAll"]]<-arr.unsetAll
@@ -1122,6 +1126,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     arr.trigger.rappresentabili<-c();
     stringa.nodo.from<-c()
     stringa.nodo.to<-c()
+    stringa.nodo.from.hidden <- c()
+    stringa.nodo.to.hidden <- c()
     # Costruisci subito la lista dei nodi plottabili (cosi' non ci penso piu')
     # Faccio anche la lista dei nodi END
     for(nomeStato in names(WF.struct$info$stati)) {
@@ -1131,13 +1137,14 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     }
     # prendo i nodi end
     arr.nodi.end <- WF.struct[[ "info" ]][[ "arr.nodi.end" ]]
-
+    
     # Frulla per ogni possibile trigger, verificando se si puo' attivare
     for( trigger.name in names(WF.struct$info$trigger) ) {
-
+      # if( trigger.name == 'T13a') browser()
+      
       # Se il trigger e' plottabile
       if(WF.struct$info$trigger[[trigger.name]]$plotIt == TRUE) {
-
+        
         stringa.nodo.from<-str_c( stringa.nodo.from,"\n" )
         stringa.nodo.to<-str_c( stringa.nodo.to,"\n" )
         # Prendi i nodi 'unset' (from)
@@ -1147,19 +1154,35 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         # Considera solo i nodi plottabili (from e to)
         arr.nodi.from <- arr.nodi.from [arr.nodi.from %in% arr.st.plotIt]
         arr.nodi.to <- arr.nodi.to [arr.nodi.to %in% arr.st.plotIt]
-
-        if(length(arr.nodi.to)>0) {
+        arr.nodi.from.hidden <- unlist(WF.struct$info$trigger[[trigger.name]]$hunset)
+        arr.nodi.to.hidden<-unlist(WF.struct$info$trigger[[trigger.name]]$hset)
+        # if( trigger.name == "T13a") browser()
+        if(length(arr.nodi.to)>0 | length(arr.nodi.to.hidden)>0 | length(arr.nodi.from.hidden)>0   ) {
           # Aggiorna l'array degli stati raggiungibili (in generale)
           # e l'array con i nomi dei trigger rappresentabili
           arr.stati.raggiungibili <- unique(c( arr.stati.raggiungibili, arr.nodi.to, arr.nodi.from ))
           arr.trigger.rappresentabili <- c( arr.trigger.rappresentabili, str_c("'",trigger.name,"'") )
-
-          # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
-          for( st.nome in arr.nodi.from ) {
-            stringa.nodo.from<-str_c( stringa.nodo.from," ",st.nome,"->'",trigger.name,"'" )
+          
+          if(length(arr.nodi.to)>0) {
+            # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
+            for( st.nome in arr.nodi.from ) {
+              stringa.nodo.from<-str_c( stringa.nodo.from," ",st.nome,"->'",trigger.name,"'" )
+            }
+            for( st.nome in arr.nodi.to ) {
+              stringa.nodo.to<-str_c( stringa.nodo.to," ","'",trigger.name,"'->",st.nome )
+            }
           }
-          for( st.nome in arr.nodi.to ) {
-            stringa.nodo.to<-str_c( stringa.nodo.to," ","'",trigger.name,"'->",st.nome )
+          if(length(arr.nodi.to.hidden)>0) {
+            # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
+            for( st.nome in arr.nodi.to.hidden ) {
+              stringa.nodo.to.hidden<-str_c( stringa.nodo.to.hidden," ","'",trigger.name,"'->",st.nome )
+            }
+          }
+          if(length(arr.nodi.from.hidden)>0) {
+            # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
+            for( st.nome in arr.nodi.from.hidden ) {
+              stringa.nodo.from.hidden<-str_c( stringa.nodo.from.hidden," ",st.nome,"->'",trigger.name,"'" )
+            }
           }
         }
       }
@@ -1188,7 +1211,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [fillcolor = ",colore,"] '",i,"' ")
       }
     }    
-    
+    # browser()
     a<-paste(c("digraph boxes_and_circles {
 
                # a 'graph' statement
@@ -1209,28 +1232,14 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
                # several edge
                ",stringa.nodo.from,"
                ",stringa.nodo.to,"
+
+               edge [arrowsize = 1, style=dashed ]
+               # several edge
+               ",stringa.nodo.from.hidden,"
+               ",stringa.nodo.to.hidden,"
+
   }"), collapse='')
     
-    b<-paste(c("digraph boxes_and_circles {
-               # a 'graph' statement
-               graph [overlap = true, fontsize = 10]
-               # several 'node' statements
-               node [shape = oval,
-               fontname = Helvetica,
-               style = filled]
-               node [fillcolor = green]
-               'BEGIN';
-               node [fillcolor = red]
-               ",paste(arr.terminazioni.raggiungibili,collapse=" "),"
-               node [fillcolor = orange]
-               ",paste(arr.stati.raggiungibili,collapse=" "),"
-               node [fillcolor = white, shape = box ]
-               ",paste(arr.trigger.rappresentabili,collapse=" "),"
-               edge [arrowsize = 1 ]
-               # several edge
-               ",stringa.nodo.from,"
-               ",stringa.nodo.to,"
-  }"), collapse='')    
 
     if( plotIt == TRUE ) grViz(a);
     if( giveBack.grVizScript == TRUE ) return(a)
@@ -1288,6 +1297,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     arr.trigger.rappresentabili<-c();
     stringa.nodo.from<-c()
     stringa.nodo.to<-c()
+    stringa.nodo.from.hidden <- c()
+    stringa.nodo.to.hidden <- c()
     howMany<-list()
 # browser()
     debug <- TRUE
@@ -1316,22 +1327,38 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
         # Considera solo i nodi plottabili (from e to)
         arr.nodi.from <- arr.nodi.from [arr.nodi.from %in% arr.st.plotIt]
         arr.nodi.to <- arr.nodi.to [arr.nodi.to %in% arr.st.plotIt]
-
-        if(length(arr.nodi.to)>0) {
+        arr.nodi.from.hidden <- unlist(WF.struct$info$trigger[[trigger.name]]$hunset)
+        arr.nodi.to.hidden<-unlist(WF.struct$info$trigger[[trigger.name]]$hset)        
+        
+        if(length(arr.nodi.to)>0 | length(arr.nodi.to.hidden)>0 | length(arr.nodi.from.hidden)>0   ) {
           # Aggiorna l'array degli stati raggiungibili (in generale)
           # e l'array con i nomi dei trigger rappresentabili
           arr.stati.raggiungibili <- unique(c( arr.stati.raggiungibili, arr.nodi.to, arr.nodi.from ))
           arr.trigger.rappresentabili <- c( arr.trigger.rappresentabili, str_c("'",trigger.name,"'") )
 
           # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
-          for( st.nome in arr.nodi.from ) {
-            stringa.nodo.from<-str_c( stringa.nodo.from," ",st.nome,"->'",trigger.name,"'" )
-            matrice.nodi.from <- rbind(matrice.nodi.from,c(st.nome,trigger.name))
+          if(length(arr.nodi.to)>0) {
+            for( st.nome in arr.nodi.from ) {
+              stringa.nodo.from<-str_c( stringa.nodo.from," ",st.nome,"->'",trigger.name,"'" )
+              matrice.nodi.from <- rbind(matrice.nodi.from,c(st.nome,trigger.name))
+            }
+            for( st.nome in arr.nodi.to ) {
+              stringa.nodo.to<-str_c( stringa.nodo.to," ","'",trigger.name,"'->",st.nome )
+              matrice.nodi.to <- rbind(matrice.nodi.to,c(trigger.name,st.nome))
+            }
           }
-          for( st.nome in arr.nodi.to ) {
-            stringa.nodo.to<-str_c( stringa.nodo.to," ","'",trigger.name,"'->",st.nome )
-            matrice.nodi.to <- rbind(matrice.nodi.to,c(trigger.name,st.nome))
+          if(length(arr.nodi.to.hidden)>0) {
+            # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
+            for( st.nome in arr.nodi.to.hidden ) {
+              stringa.nodo.to.hidden<-str_c( stringa.nodo.to.hidden," ","'",trigger.name,"'->",st.nome )
+            }
           }
+          if(length(arr.nodi.from.hidden)>0) {
+            # Costruisci le stringhe dei nomi degli archi (from e to) con in mezzo il trigger
+            for( st.nome in arr.nodi.from.hidden ) {
+              stringa.nodo.from.hidden<-str_c( stringa.nodo.from.hidden," ",st.nome,"->'",trigger.name,"'" )
+            }
+          }          
         }
       }
     }
@@ -1430,6 +1457,12 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
                # several edge
                ",stringa.nodo.from,"
                ",stringa.nodo.to,"
+
+               edge [arrowsize = 1, style=dashed ]
+               # several edge
+               ",stringa.nodo.from.hidden,"
+               ",stringa.nodo.to.hidden,"
+
   }"), collapse='')
     if(giveBack.grVizScript == TRUE) return (a)
     grViz(a);
