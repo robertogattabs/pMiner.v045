@@ -1365,8 +1365,33 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
 
     # Distingui fra nodi end e nodi normali (questione di colore)
     arr.terminazioni.raggiungibili <- arr.nodi.end[arr.nodi.end %in% arr.stati.raggiungibili]
+    arr.stati.raggiungibili<- arr.stati.raggiungibili[!(arr.stati.raggiungibili %in% arr.nodi.end)]
     # arr.stati.raggiungibili<- arr.stati.raggiungibili[!(arr.stati.raggiungibili %in% arr.nodi.end)]
+    
 
+    # -im 
+    # Cambia i colori, se necessario
+    
+    clean.arr.terminazioni.raggiungibili <- str_replace_all(string = arr.terminazioni.raggiungibili,pattern = "'","")
+    clean.arr.stati.raggiungibili <- str_replace_all(string = arr.stati.raggiungibili,pattern = "'","")
+    
+    nuova.stringa.nodi<-""
+    for(i in clean.arr.terminazioni.raggiungibili) {
+      colore <- str_trim(WF.struct$info$stati[[i]]$col)
+      if(colore=="") colore <- "red"
+      nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [fillcolor = ",colore,"] '",i,"' ")
+    }
+    
+    for(i in clean.arr.stati.raggiungibili) {
+      if(i!="BEGIN"){ 
+        colore <- str_trim(WF.struct$info$stati[[i]]$col)
+        if(colore=="") colore <- "orange"
+        if(str_sub(string = colore,start = 1,end = 1)=="#") colore<- str_c("'",colore,"'")
+        nuova.stringa.nodi <- str_c(nuova.stringa.nodi,"\n node [fillcolor = ",colore,"] '",i,"' ")
+      }
+    } 
+    # -fm
+    
     # Ora sistema le froceries grafiche
     # PER I NODI
     stringa.stati<-"node [fillcolor = Orange]"
@@ -1437,7 +1462,35 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       stringa.nodo.to<-c(stringa.nodo.to,nuovaRiga)
     }
     # browser()
+    # nuova.stringa.nodi
     a<-paste(c("digraph boxes_and_circles {
+
+               # a 'graph' statement
+               graph [overlap = true, fontsize = 10]
+
+               # several 'node' statements
+               node [shape = oval,
+               fontname = Helvetica,
+               style = filled]
+               node [fillcolor = green]
+               'BEGIN';
+               ",nuova.stringa.nodi,"
+
+               ",stringa.stati,"
+               ",stringa.trigger,"
+
+               edge [arrowsize = 1 ]
+               # several edge
+               ",stringa.nodo.from,"
+               ",stringa.nodo.to,"
+
+               edge [arrowsize = 1, style=dashed ]
+               # several edge
+               ",stringa.nodo.from.hidden,"
+               ",stringa.nodo.to.hidden,"
+
+  }"), collapse='')
+    b<-paste(c("digraph boxes_and_circles {
 
                # a 'graph' statement
                graph [overlap = true, fontsize = 10]
@@ -1463,7 +1516,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
                ",stringa.nodo.from.hidden,"
                ",stringa.nodo.to.hidden,"
 
-  }"), collapse='')
+  }"), collapse='')    
     if(giveBack.grVizScript == TRUE) return (a)
     grViz(a);
   }
