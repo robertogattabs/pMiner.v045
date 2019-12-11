@@ -2240,18 +2240,58 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     # now, get the times
     tabellona <- c()
+    browser()
     for( ID in PatID ) {
+      # -im 
       tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
       fromMin <- tmpHac[ which(tmpHac[,1]==fromState & tmpHac[,2]=="begin" )[1], 4 ]
       toMin <- tmpHac[ which(tmpHac[,1]==toState & tmpHac[,2]=="begin" )[1], 4 ]
-      evento <- 1
-      if(is.na(toMin)) { 
-        toMin <- max(as.numeric(res$list.computation.matrix$stati.timeline[[ID]][,4] ))
-        evento <- 0
+      PDVMin_vect <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
+      # if (sum(is.na(PDVMin_vect))==length(PDVMin_vect)) {
+      #   PDVMin <- NA
+      # } else {
+      #   PDVMin <- min(tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ], na.rm = T)
+      # }
+      # evento <- NA
+  
+      if (is.na(fromMin)) {
+        evento <- -1
+      } else { # !is.na(fromMin)
+        if (is.na(toMin)) {
+          if (is.na(PDVMin)) {
+            evento <- -1
+          } else {
+            evento <- 0
+          }
+        } else { # !is.na(toMin)
+          if (is.na(PDVMin)) {
+            evento <- 1
+          } else {
+            if (PDVMin < toMin) {
+              evento <- 0
+            } else {
+              evento <- 1
+            }
+          }
+        }
       }
-      deltaMin <- as.numeric(toMin) - as.numeric(fromMin)
+      
+      if (evento == -1) deltaMin <- NA
+      if (evento == 0) deltaMin <- as.numeric(PDVMin) - as.numeric(fromMin)
+      if (evento == 1) deltaMin <- as.numeric(toMin) - as.numeric(fromMin)
+      
       tabellona <- rbind(tabellona,c(ID,deltaMin,evento))
-      # browser()
+      # tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
+      # fromMin <- tmpHac[ which(tmpHac[,1]==fromState & tmpHac[,2]=="begin" )[1], 4 ]
+      # toMin <- tmpHac[ which(tmpHac[,1]==toState & tmpHac[,2]=="begin" )[1], 4 ]
+      # evento <- 1
+      # if(is.na(toMin)) { 
+      #   toMin <- max(as.numeric(res$list.computation.matrix$stati.timeline[[ID]][,4] ))
+      #   evento <- 0
+      # }
+      # deltaMin <- as.numeric(toMin) - as.numeric(fromMin)
+      # tabellona <- rbind(tabellona,c(ID,deltaMin,evento))
+      # - fm
     }
     
     tabellona <- tabellona[  sort(as.numeric(tabellona[,2]),index.return = T)$ix, ]
