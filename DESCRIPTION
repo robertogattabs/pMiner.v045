@@ -1,7 +1,7 @@
 Package: pMineR
 Type: Package
 Title: Processes Mining in Medicine
-Version: 0.44
+Version: 0.45
 Date: 2019-04-15
 Authors@R: c(person("Roberto", "Gatta", role = c("aut", "cre"),
 		     email = "roberto.gatta.bs@gmail.com"),
