@@ -2228,7 +2228,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
   }
   Time.To.Flight <- function( fromState, toState, 
                               passingThrough=c(), passingNotThrough=c(), stoppingAt=c(), 
-                              stoppingNotAt=c(), withPatientID=c() ) {
+                              stoppingNotAt=c(), PDVAt=c(), withPatientID=c() ) {
     
     # prendi i risultati dell'ultimo RUN
     res <- get.list.replay.result();
@@ -2267,37 +2267,10 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
   KaplanMeier <- function( fromState, toState, 
                            passingThrough=c(), passingNotThrough=c(), stoppingAt=c(), 
-                           stoppingNotAt=c(), withPatientID=c() )  {
-    
-    # # prendi i risultati dell'ultimo RUN
-    # res <- get.list.replay.result();
-    # 
-    # # estrai i pazienti che soddisfano i passaggi fra i nodi
-    # tmpPatID <- estrai.pazienti.da.percorso( fromState, toState, passingThrough, passingNotThrough,
-    #                                          stoppingAt, stoppingNotAt, withPatientID )
-    # PatID <- tmpPatID$PatID
-    # 
-    # # now, get the times
-    # tabellona <- c()
-    # for( ID in PatID ) {
-    #   tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
-    #   fromMin <- tmpHac[ which(tmpHac[,1]==fromState & tmpHac[,2]=="begin" )[1], 4 ]
-    #   toMin <- tmpHac[ which(tmpHac[,1]==toState & tmpHac[,2]=="begin" )[1], 4 ]
-    #   deltaMin <- as.numeric(toMin) - as.numeric(fromMin)
-    #   tabellona <- rbind(tabellona,c(ID,deltaMin,1))
-    # }
-    # 
-    # tabellona <- tabellona[  sort(as.numeric(tabellona[,2]),index.return = T)$ix, ]
-    # 
-    # if(!is.matrix(tabellona)) return( list("table"=NA, "KM"=NA ) )
-    # 
-    # colnames(tabellona) <- c("ID","time","outcome")
-  
-
-    # aaa <- data.frame("ID"=tabellona[,1],"time"=as.numeric(tabellona[,2]),"outcome"=as.numeric(tabellona[,3]) )
+                           stoppingNotAt=c(), PDVAt=c(),  withPatientID=c() )  {
     
     TOF.list <- Time.To.Flight( fromState, toState, passingThrough, passingNotThrough, stoppingAt, 
-             stoppingNotAt, withPatientID )
+             stoppingNotAt, PDVAt, withPatientID )
     
     aaa <- TOF.list$TOF.table
     
