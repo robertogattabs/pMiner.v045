@@ -2240,13 +2240,14 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     # now, get the times
     tabellona <- c()
-    browser()
+    #browser()
     for( ID in PatID ) {
       # -im 
       tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
       fromMin <- tmpHac[ which(tmpHac[,1]==fromState & tmpHac[,2]=="begin" )[1], 4 ]
       toMin <- tmpHac[ which(tmpHac[,1]==toState & tmpHac[,2]=="begin" )[1], 4 ]
-      PDVMin_vect <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
+      PDVMin <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
+      # PDVMin_vect <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
       # if (sum(is.na(PDVMin_vect))==length(PDVMin_vect)) {
       #   PDVMin <- NA
       # } else {
@@ -2313,6 +2314,10 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
              stoppingNotAt, PDVAt, withPatientID )
     
     aaa <- TOF.list$TOF.table
+    # browser()
+    # -im ET
+    aaa <- aaa[-which(aaa$outcome==-1),]
+    # -fm ET
     
     KM0 <- survfit(Surv(time, outcome)~1,   data=aaa)
     
