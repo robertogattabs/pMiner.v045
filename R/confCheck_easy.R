@@ -2240,7 +2240,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     # now, get the times
     tabellona <- c()
-    #browser()
+    # browser()
     for( ID in PatID ) {
       # -im 
       tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
@@ -2295,7 +2295,11 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       # - fm
     }
     
+    # -im ET
+    tabellona <- tabellona[which(tabellona[,3]!=-1),]
     tabellona <- tabellona[  sort(as.numeric(tabellona[,2]),index.return = T)$ix, ]
+    # tabellona <- tabellona[  sort(as.numeric(tabellona[,2]),index.return = T)$ix, ]
+    # -fm ET
     
     if(!is.matrix(tabellona)) return( list("table"=NA, "KM"=NA ) )
     
@@ -2315,9 +2319,6 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     aaa <- TOF.list$TOF.table
     # browser()
-    # -im ET
-    aaa <- aaa[-which(aaa$outcome==-1),]
-    # -fm ET
     
     KM0 <- survfit(Surv(time, outcome)~1,   data=aaa)
     
