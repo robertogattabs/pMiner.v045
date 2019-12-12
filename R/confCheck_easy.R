@@ -2238,6 +2238,12 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
                                              stoppingAt, stoppingNotAt, withPatientID )
     PatID <- tmpPatID$PatID
     
+    # -im
+    if (length(PatID)==0) {
+      return( list( "TOF.table" = NA , "error" = -1 ))
+    }
+    # -fm
+    
     # now, get the times
     tabellona <- c()
     # browser()
@@ -2296,18 +2302,17 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     }
     
     # -im ET
-    tabellona <- tabellona[which(tabellona[,3]!=-1),]
-    tabellona <- tabellona[  sort(as.numeric(tabellona[,2]),index.return = T)$ix, ]
+    tabellona <- matrix(tabellona[which(tabellona[,3]!=-1),], ncol=3)
+    tabellona <- matrix(tabellona[  sort(as.numeric(tabellona[,2]),index.return = T)$ix, ], ncol=3)
     # tabellona <- tabellona[  sort(as.numeric(tabellona[,2]),index.return = T)$ix, ]
+    # if(!is.matrix(tabellona)) return( list("table"=NA, "KM"=NA ) )
     # -fm ET
-    
-    if(!is.matrix(tabellona)) return( list("table"=NA, "KM"=NA ) )
     
     colnames(tabellona) <- c("ID","time","outcome")
     
     aaa <- data.frame("ID"=tabellona[,1],"time"=as.numeric(tabellona[,2]),"outcome"=as.numeric(tabellona[,3]) )
     
-    return( list( "TOF.table" = aaa ) )    
+    return( list( "TOF.table" = aaa, "error" = 0 ) )    
   }  
     
   KaplanMeier <- function( fromState, toState, 
@@ -2316,6 +2321,10 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     
     TOF.list <- Time.To.Flight( fromState, toState, passingThrough, passingNotThrough, stoppingAt, 
              stoppingNotAt, PDVAt, withPatientID )
+    # browser()
+    if (TOF.list$error != 0) {
+      return(list("table"=NA, "KM"=NA, "ID"=NA, "error"=TOF.list$error ))
+    }
     
     aaa <- TOF.list$TOF.table
     # browser()
@@ -2323,7 +2332,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     KM0 <- survfit(Surv(time, outcome)~1,   data=aaa)
     
     # return( list("table"=aaa, "KM"=KM0, "ID"=tabellona[,1] ) )
-    return( list("table"=aaa, "KM"=KM0, "ID"=aaa$ID ) )
+    return( list("table"=aaa, "KM"=KM0, "ID"=aaa$ID, "error"=0 ) )
     
   }
   LogRankTest<-function( KM1 , KM2, col.1, col.2 )  {
