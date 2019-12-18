@@ -245,6 +245,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
       wrklst$fromRow <- NA
       wrklst$toRow <- NA
       eventsInPath <- c()
+      # browser()
       # Riproduci il calcolo, fra gli stati 'from' e 'to' 
       for(riga in seq(1,nrow(x))) {
         
@@ -308,10 +309,11 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
       lista.res <- list( "eligible" = possibleCandidate,
                          "event.censored" = event.censored,
                          "deltaT" = deltaT,
-                         "arr.evt" = eventsInPath ) 
+                         "arr.evt" = eventsInPath,
+                         "error" = 0) 
       return(lista.res)
     })
-    
+    # browser()
     matrice.KM <- c()
     for( ID in names(res) ) {
       if( res[[ID]]$eligible == TRUE ) {
@@ -326,7 +328,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
     
     KM0 <- survfit(Surv(time, outcome)~1,   data=matrice.KM)
     
-    return( list("table"=matrice.KM, "KM"=KM0, "ID"=matrice.KM$ID ) )
+    return( list("table"=matrice.KM, "KM"=KM0, "ID"=matrice.KM$ID, "error"=0 ) )
     
   }
   replay<-function( dataList ,  col.toCheckPerformances=NA ) {
