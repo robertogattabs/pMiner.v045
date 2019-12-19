@@ -2247,47 +2247,95 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     # now, get the times
     tabellona <- c()
     # browser()
+    ID.skippati <-c()
     for( ID in PatID ) {
+      toProcess <- TRUE
       # -im 
-      tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
-      fromMin <- tmpHac[ which(tmpHac[,1]==fromState & tmpHac[,2]=="begin" )[1], 4 ]
-      toMin <- tmpHac[ which(tmpHac[,1]==toState & tmpHac[,2]=="begin" )[1], 4 ]
-      PDVMin <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
-      # PDVMin_vect <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
-      # if (sum(is.na(PDVMin_vect))==length(PDVMin_vect)) {
-      #   PDVMin <- NA
-      # } else {
-      #   PDVMin <- min(tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ], na.rm = T)
-      # }
-      # evento <- NA
-  
-      if (is.na(fromMin)) {
-        evento <- -1
-      } else { # !is.na(fromMin)
-        if (is.na(toMin)) {
-          if (is.na(PDVMin)) {
-            evento <- -1
-          } else {
-            evento <- 0
-          }
-        } else { # !is.na(toMin)
-          if (is.na(PDVMin)) {
-            evento <- 1
-          } else {
-            if (PDVMin < toMin) {
-              evento <- 0
+      if( !(ID %in% names(res$list.computation.matrix$stati.timeline))) {
+        toProcess <- FALSE; ID.skippati <- c( ID.skippati , ID ) 
+      }
+      
+      if( toProcess == TRUE ) {
+        tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
+        fromMin <- tmpHac[ which(tmpHac[,1]==fromState & tmpHac[,2]=="begin" )[1], 4 ]
+        toMin <- tmpHac[ which(tmpHac[,1]==toState & tmpHac[,2]=="begin" )[1], 4 ]
+        PDVMin <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
+        # PDVMin_vect <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
+        # if (sum(is.na(PDVMin_vect))==length(PDVMin_vect)) {
+        #   PDVMin <- NA
+        # } else {
+        #   PDVMin <- min(tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ], na.rm = T)
+        # }
+        # evento <- NA
+        
+        if (is.na(fromMin)) {
+          evento <- -1
+        } else { # !is.na(fromMin)
+          if (is.na(toMin)) {
+            if (is.na(PDVMin)) {
+              evento <- -1
             } else {
+              evento <- 0
+            }
+          } else { # !is.na(toMin)
+            if (is.na(PDVMin)) {
               evento <- 1
+            } else {
+              if (PDVMin < toMin) {
+                evento <- 0
+              } else {
+                evento <- 1
+              }
             }
           }
         }
+        
+        if (evento == -1) deltaMin <- NA
+        if (evento == 0) deltaMin <- as.numeric(PDVMin) - as.numeric(fromMin)
+        if (evento == 1) deltaMin <- as.numeric(toMin) - as.numeric(fromMin)
+        
+        tabellona <- rbind(tabellona,c(ID,deltaMin,evento))
+        
       }
-      
-      if (evento == -1) deltaMin <- NA
-      if (evento == 0) deltaMin <- as.numeric(PDVMin) - as.numeric(fromMin)
-      if (evento == 1) deltaMin <- as.numeric(toMin) - as.numeric(fromMin)
-      
-      tabellona <- rbind(tabellona,c(ID,deltaMin,evento))
+      # tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
+      # fromMin <- tmpHac[ which(tmpHac[,1]==fromState & tmpHac[,2]=="begin" )[1], 4 ]
+      # toMin <- tmpHac[ which(tmpHac[,1]==toState & tmpHac[,2]=="begin" )[1], 4 ]
+      # PDVMin <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
+      # # PDVMin_vect <- tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ] 
+      # # if (sum(is.na(PDVMin_vect))==length(PDVMin_vect)) {
+      # #   PDVMin <- NA
+      # # } else {
+      # #   PDVMin <- min(tmpHac[ which(tmpHac[,1] %in% PDVAt & tmpHac[,2]=="begin" )[1], 4 ], na.rm = T)
+      # # }
+      # # evento <- NA
+      # 
+      # if (is.na(fromMin)) {
+      #   evento <- -1
+      # } else { # !is.na(fromMin)
+      #   if (is.na(toMin)) {
+      #     if (is.na(PDVMin)) {
+      #       evento <- -1
+      #     } else {
+      #       evento <- 0
+      #     }
+      #   } else { # !is.na(toMin)
+      #     if (is.na(PDVMin)) {
+      #       evento <- 1
+      #     } else {
+      #       if (PDVMin < toMin) {
+      #         evento <- 0
+      #       } else {
+      #         evento <- 1
+      #       }
+      #     }
+      #   }
+      # }
+      # 
+      # if (evento == -1) deltaMin <- NA
+      # if (evento == 0) deltaMin <- as.numeric(PDVMin) - as.numeric(fromMin)
+      # if (evento == 1) deltaMin <- as.numeric(toMin) - as.numeric(fromMin)
+      # 
+      # tabellona <- rbind(tabellona,c(ID,deltaMin,evento))
       # tmpHac <- res$list.computation.matrix$stati.timeline[[ID]]
       # fromMin <- tmpHac[ which(tmpHac[,1]==fromState & tmpHac[,2]=="begin" )[1], 4 ]
       # toMin <- tmpHac[ which(tmpHac[,1]==toState & tmpHac[,2]=="begin" )[1], 4 ]
@@ -2300,6 +2348,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       # tabellona <- rbind(tabellona,c(ID,deltaMin,evento))
       # - fm
     }
+    
+    for( ID in ID.skippati ) { cat( "\n WARNING: the patient ",ID," has been skipped " )}
     
     # -im ET
     tabellona <- matrix(tabellona[which(tabellona[,3]!=-1),], ncol=3)
