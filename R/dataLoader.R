@@ -487,6 +487,42 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
       "version"="0.41"
     ))
   }  
+  plotPatientTimeline<-function( PatID , table.format.date="%d/%m/%Y %H:%M:%S", output.format.date = "%d/%m/%Y" ,cex.axis = 0.6, cex.text = 0.7) {
+    eventTable <- cbind(
+      pat.process[[as.character(PatID)]][,param.dateColumnName],
+      pat.process[[as.character(PatID)]][,param.EVENTName]
+    )
+    
+    colnames(eventTable)<-c("DATA","DES");
+    df<-as.data.frame(eventTable)
+    df$DATA<-as.character.factor(df$DATA)
+    df$DES<-as.character.factor(df$DES)
+    df$YM <- as.Date(df$DATA, format=table.format.date)
+    min.data <- df$DATA[1]
+    max.data <- df$DATA[length(df$DATA)]
+    
+    delta.date <- as.numeric(difftime(as.POSIXct(max.data, format = table.format.date),as.POSIXct(min.data, format = table.format.date),units = 'mins'))
+    arr.delta.date <- as.numeric(difftime(as.POSIXct(df$DATA, format = table.format.date),as.POSIXct(rep(min.data,length(df$DATA)), format = table.format.date),units = 'mins'))
+    
+    color.bar = "#5B7FA3";
+    col.vert.ar <- "#5B7FA3"
+    col.stanga <- "gray80"
+    plot(NA,ylim=c(-1,1),xlim=c(0,delta.date),ann=FALSE,axes=FALSE)
+    abline(h=0,lwd=2,col=color.bar)
+    
+    segments(arr.delta.date,rep(-.05,length(arr.delta.date)),arr.delta.date,rep(.05,length(arr.delta.date))  ,pch='8',col=col.vert.ar )
+    
+    ypts <- rep_len(c(-1,-0.7,-0.3,0.3,0.7,1), length.out=nrow(df))
+    txtpts <- rep_len(c(1,3), length.out=nrow(df))
+    
+    for( indice in seq(1,length(df$DATA))) {
+      label.data <- as.character(format(as.POSIXct(df$DATA[indice], format = table.format.date),format=output.format.date))
+      label.evt <- df$DES[indice]
+      label <- paste( c( label.evt,"\n",label.data), collapse = ''  )
+      text(x = arr.delta.date[indice], y = ypts[indice], labels = label  , cex = cex.text )
+      segments( arr.delta.date[indice], ypts[indice], arr.delta.date[indice],0,col=col.stanga)
+    }
+  }   
   #=================================================================================
   # costructor
   #=================================================================================  
@@ -526,6 +562,7 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     "applyFilter"=applyFilter,
     "addDictionary"=addDictionary,
     "getTranslation"=getTranslation,
+    "plotPatientTimeline"=plotPatientTimeline,
     "getClass"=getClass
   ))
 }
