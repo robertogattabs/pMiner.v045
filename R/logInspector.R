@@ -14,29 +14,6 @@
 #'    \item \code{num } the number of most frequent events/processes to plot
 #'   }
 #' @export
-#' @examples \dontrun{
-#' # -----------------------------------------------
-#' #  USING THE METHODS of the class
-#' # -----------------------------------------------
-#' obj.L<-dataLoader();   # create a Loader
-#'
-#' # Load a .csv using "DES" and "ID" as column names to indicate events
-#' # and Patient's ID
-#' obj.L$load.csv(nomeFile = "../otherFiles/test_02.csv",
-#' IDName = "ID",EVENTName = "DES",dateColumnName = "DATA")
-#'
-#' # now create an object logInspector
-#' obj.logI<-logInspector();
-#'
-#' # load the data into logInspector object
-#' obj.logI$loadDataset( obj.L$getData() );
-#'
-#' # get event-related descriptive statistics
-#' obj.logI$getEventStats();
-#'
-#' # get process-related descriptive statistics
-#' obj.logI$getProcessStats();
-#' }
 logInspector <- function() {
   eventType <-''
   processInstances <-''
