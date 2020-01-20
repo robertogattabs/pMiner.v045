@@ -29,13 +29,21 @@ QoDInspector <- function() {
   #=================================================================================
   # strParser
   #=================================================================================  
-  ruleScanner <- function( stringa ) {
+  checkRule <- function( stringa ) {
     arr.ID <- names(global.dataLoader$pat.process)
-    lst.Pat <- list()
+    res <- list()
     for( ID in arr.ID ) {
-      lst.Pat[[ID]] <- strParser( ID, stringa )
+      res[[ID]] <- strParser( ID, stringa )
     }
-    return( lst.Pat ) 
+    IDD.true <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
+    IDD.false <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
+
+    toReturn <- list()
+    toReturn$details <- res
+    toReturn$IDD.true <- IDD.true
+    toReturn$IDD.false <- IDD.false
+    
+    return( toReturn ) 
   }  
   #=================================================================================
   # strParser
@@ -158,7 +166,7 @@ QoDInspector <- function() {
     "loadDataset"=loadDataset,
     "defineAlias"=defineAlias,
     "getStats"=getStats,
-    "ruleScanner"=ruleScanner
+    "checkRule"=checkRule
   ) )
   
 }
