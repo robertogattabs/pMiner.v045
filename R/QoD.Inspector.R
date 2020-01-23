@@ -27,28 +27,127 @@ QoDInspector <- function() {
     global.processInstances.toSymbol[[ event ]]$alias <<- alias
   }
   #=================================================================================
+  # checkPath
+  #================================================================================= 
+  checkPath <- function( arr.ev.from, arr.ev.to, 
+                         arr.ev.pass.through = c(), 
+                         arr.ev.pass.not.through = c(),
+                         arr.trapped.at = c(),
+                         arr.global.counting.rules = c(),
+                         arr.local.counting.rules = c(),
+                         arr.additional.timing.rules = c(),
+                         verboseReturn = FALSE ) {
+    
+    arr.ID <- names(global.dataLoader$pat.process)
+    
+    ID.true <- c()
+    ID.false <- c()
+    ID.trapped <- c()    
+    
+    if( length(arr.global.counting.rules) > 0 ) {
+      for( regola in arr.global.counting.rules ) {
+        aaa <- checkRule( regola , verboseReturn = FALSE)
+        arr.ID <- intersect( arr.ID , aaa )
+      }
+    }
+    ID.false <- c(ID.false,names(global.dataLoader$pat.process)[!(names(global.dataLoader$pat.process) %in% arr.ID)])
+    
+    # inizia ad analizzare gli eventi
+    for( ID in arr.ID ) {
+      event.sequence <- c("BEGIN",global.dataLoader$pat.process[[ID]][, global.dataLoader$csv.EVENTName],"END")
+      startFrom <- which(arr.ev.from %in% event.sequence)
+      finito <- FALSE; trappato <- FALSE; PNT.attivato <- FALSE; PT.attivato <- FALSE; iniziato <- FALSE
+      if( length(arr.ev.pass.through) == 0 ) PT.attivato <- TRUE
+      
+      if( length(startFrom) > 0 ) {
+        iniziato <- TRUE
+        startFrom <- min( startFrom )
+        for( indice in seq( startFrom + 1, length(event.sequence) ) ) {
+          current.Event <- event.sequence[indice]
+          
+          if( current.Event %in% arr.ev.to) {
+            finito <- TRUE
+          }
+          if( current.Event %in% arr.trapped.at) {
+            trappato <- TRUE
+          }
+          if( current.Event %in% arr.ev.pass.not.through) {
+            PNT.attivato <- TRUE
+          } 
+          if( current.Event %in% arr.ev.pass.through) {
+            PT.attivato <- TRUE
+          }      
+          if( finito == TRUE | trappato == TRUE | PNT.attivato == TRUE ) break;
+        }
+      }
+
+      # Se il paziente avesse avuto un percorso di successo, verifica le local
+      # counting and timing rules
+      if( finito == TRUE ) {
+        if( length(arr.local.counting.rules) > 0 ) {
+          event.subsequence <- event.sequence[startFrom:indice]
+          for( regola in arr.local.counting.rules) {
+            risultato <- strParser(ID = ID, stringa = regola, evt.sequence = event.subsequence, verboseReturn = FALSE )
+            # se il risultato e' FALSE fai si' che il resto dei controlli lo inseriscano come opportuno
+            # (nell'array degli ID.false)
+            if( risultato == FALSE ) {
+              iniziato <- FALSE; finito <- FALSE; trappato <- FALSE; PNT.attivato <- FALSE; PT.attivato <- TRUE;
+            }
+          }
+        }
+      }
+      
+      # Fai il resto dei controlli
+      if( iniziato == FALSE ) {
+        ID.false <- c( ID.false, ID ) 
+      } else {
+        if( PNT.attivato == TRUE | PT.attivato == FALSE  ) {
+          ID.false <- c( ID.false, ID )
+        } else {
+          if( trappato == TRUE ) { 
+            ID.trapped <- c( ID.trapped, ID )
+          } else {
+            if( finito == TRUE ) {
+              ID.true <- c( ID.true, ID )
+            } else {
+              ID.false <- c( ID.false, ID )
+            }
+          }
+        }
+      }
+
+      if( length(intersect(ID.true,ID.false))>0 | length(intersect(ID.true,ID.trapped))>0 |
+          length(intersect(ID.trapped,ID.false))>0   ) browser()
+    }
+    
+    return( list( "TRUE" = ID.true , "FALSE" = ID.false, "TRAPPED" = ID.trapped)   )
+  }   
+  #=================================================================================
   # strParser
   #=================================================================================  
-  checkRule <- function( stringa ) {
+  checkRule <- function( stringa , verboseReturn = TRUE ) {
     arr.ID <- names(global.dataLoader$pat.process)
     res <- list()
     for( ID in arr.ID ) {
       res[[ID]] <- strParser( ID, stringa )
     }
+    
     IDD.true <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
-    IDD.false <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
-
+    IDD.false <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == FALSE ) return( names(res)[i] )}))
+    
     toReturn <- list()
     toReturn$details <- res
     toReturn$IDD.true <- IDD.true
     toReturn$IDD.false <- IDD.false
+    
+    if( verboseReturn == FALSE ) return ( IDD.true )
     
     return( toReturn ) 
   }  
   #=================================================================================
   # strParser
   #=================================================================================  
-  strParser <- function( ID, stringa ) {
+  strParser <- function( ID, stringa , evt.sequence=c() ,verboseReturn = TRUE ) {
     
     rules <- c( "->" = "[ ']*[a-zA-Z_]+[ ']*(->)[ ']*[a-zA-Z_]+[ ']*",
                 "-->" = "[ ']*[a-zA-Z_]+[ ']*(-->)[ ']*[a-zA-Z_]+[ ']*",
@@ -67,9 +166,9 @@ QoDInspector <- function() {
     colnames(kkk)<-c("rule","operator","value")
     
     for( riga in 1:nrow(kkk) ) {
-      kkk[riga,"value"] <- strAtomicSolver( ID, kkk[riga,1] , kkk[riga,2] )
+      kkk[riga,"value"] <- strAtomicSolver( ID, kkk[riga,1] , kkk[riga,2] , evt.sequence = evt.sequence)
     }
-    
+    # browser()
     # ora rimpiazza i valori di verita'
     for( riga in 1:nrow(kkk) ) {
       stringa <- str_replace_all(string = stringa,pattern = as.character(kkk[riga,"rule"]),replacement = kkk[riga,"value"])
@@ -77,21 +176,27 @@ QoDInspector <- function() {
     
     # EVAL: costruisci il risultato
     RISULTATO <- eval(expr = parse(text = stringa))
+    if( verboseReturn == TRUE ) {
+      res <- list("res"=RISULTATO, "TF.table"=kkk)      
+    } else {
+      res <- RISULTATO
+    }
 
-    return( list("res"=RISULTATO, "TF.table"=kkk) )
+    
+    return( res )
   }
   #=================================================================================
   # strAtomicSolver
   #=================================================================================   
-  strAtomicSolver <- function( ID, stringa, operator ) {
+  strAtomicSolver <- function( ID, stringa, operator , evt.sequence = c()) {
     
     sinonimi <- unlist(global.processInstances.toSymbol)
     names(sinonimi) <- names(global.processInstances.toSymbol)
     
     ooo <- str_split(stringa , operator)[[1]]
     first.o <- str_trim(ooo[1])
-    second.o <- str_trim(ooo[2])
-    
+    second.o <- str_trim(ooo[2])      
+
     if(substr(first.o,1,1) == "'" & substr(first.o,str_length(first.o),str_length(first.o)) == "'") {
       first.o <- str_trim(str_replace_all(first.o,"'",""))
     } else {
@@ -103,27 +208,26 @@ QoDInspector <- function() {
     } else {
       second.o <- names(sinonimi)[which(sinonimi %in% second.o)]
     }
-
-    event.sequence <- c("BEGIN",global.dataLoader$pat.process[[ID]][, global.dataLoader$csv.EVENTName],"END")
+    
+    if( length(evt.sequence) == 0)
+      event.sequence <- c("BEGIN",global.dataLoader$pat.process[[ID]][, global.dataLoader$csv.EVENTName],"END")
+    else 
+      event.sequence <- c("BEGIN",evt.sequence,"END")
     
     FO <- which( event.sequence %in% first.o)
     SO <- which( event.sequence %in% second.o)
 
     if( operator == "->") {
-      if (sum(unlist(lapply( FO, function(i) { (i+1) %in% SO} ))) == 0 ) return( "FALSE" )
-      else return( "TRUE" )
+      return( sum(unlist(lapply( FO, function(i) { (i+1) %in% SO} ))) )
     }
     if( operator == "!->") {
-      if (sum(unlist(lapply( FO, function(i) { (i+1) %in% SO} ))) == 0 ) return( "FALSE" )
-      else return( "TRUE" )
+      return( sum(unlist(lapply( FO, function(i) { (i+1) %in% SO} ))) )
     }    
     if( operator == "-->") {
-      if (sum(unlist(lapply( FO, function(i) { i < SO} ))) == 0 ) return( "FALSE" )
-      else return( "TRUE" )
+      return( sum(unlist(lapply( FO, function(i) { i < SO} )))  )
     }    
     if( operator == "!-->") {
-      if (sum(unlist(lapply( FO, function(i) { i < SO} ))) == 0 ) return( "TRUE" )
-      else return( "FALSE" )
+      return( sum(unlist(lapply( FO, function(i) { i < SO} ))  ) )
     }        
   }
   #=================================================================================
@@ -135,7 +239,7 @@ QoDInspector <- function() {
       matriceAlias <- cbind( names(global.processInstances.toSymbol), unlist(global.processInstances.toSymbol))
       colnames(matriceAlias)<-c("Event","Alias")      
     }
-
+    
     return(
       list(
         "EFPTs" = global.EFPTs,
@@ -166,7 +270,225 @@ QoDInspector <- function() {
     "loadDataset"=loadDataset,
     "defineAlias"=defineAlias,
     "getStats"=getStats,
-    "checkRule"=checkRule
+    "checkRule"=checkRule,
+    "checkPath"=checkPath
   ) )
   
 }
+
+#' #' A quality of data inspector
+#' #'
+#' #' @description   a QoD inspector class
+#' #' @export
+#' QoDInspector <- function() {
+#'   global.processInstances.toSymbol <- list()
+#'   global.dataLoader <- c();
+#'   global.EFPTs <- c()
+#'   #===========================================================
+#'   # loadDataset
+#'   #===========================================================
+#'   loadDataset<-function( dataList ) {
+#'     # Clear some possible previously inserted attribute
+#'     clearAttributes()
+#'     # set the new attributes
+#'     EFOMM <- EfirstOrderMarkovModel()
+#'     EFOMM$loadDataset( dataList )
+#'     global.EFPTs <<- EFOMM$getEFPTs()
+#'     # set the new attributes
+#'     global.dataLoader <<- dataList
+#'   }
+#'   #===========================================================
+#'   # defineAlias
+#'   #===========================================================  
+#'   defineAlias <- function( event , alias ) {
+#'     global.processInstances.toSymbol[[ event ]] <<- list()
+#'     global.processInstances.toSymbol[[ event ]]$alias <<- alias
+#'   }
+#'   #=================================================================================
+#'   # strParser
+#'   #=================================================================================  
+#'   checkRule <- function( stringa ) {
+#'     arr.ID <- names(global.dataLoader$pat.process)
+#'     res <- list()
+#'     for( ID in arr.ID ) {
+#'       res[[ID]] <- strParser( ID, stringa )
+#'     }
+#'     IDD.true <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
+#'     IDD.false <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
+#' 
+#'     toReturn <- list()
+#'     toReturn$details <- res
+#'     toReturn$IDD.true <- IDD.true
+#'     toReturn$IDD.false <- IDD.false
+#'     
+#'     return( toReturn ) 
+#'   }  
+#'   #=================================================================================
+#'   # strParser
+#'   #=================================================================================  
+#'   strParser <- function( ID, stringa ) {
+#'     
+#'     rules <- c( 
+#'                 "->" = "[ ']*[a-zA-Z_]+[ ']*(->)[ ']*[a-zA-Z_]+[ ']*",
+#'                 "-->" = "[ ']*[a-zA-Z_]+[ ']*(-->)[ ']*[a-zA-Z_]+[ ']*",
+#'                 "!->" = "[ ']*[a-zA-Z_]+[ ']*(!->)[ ']*[a-zA-Z_]+[ ']*",
+#'                 "!-->" = "[ ']*[a-zA-Z_]+[ ']*(!-->)[ ']*[a-zA-Z_]+[ ']*",
+#'                 "[ ]*((all|some|count)\()[ ']*[a-zA-Z_]+[ ']*(->)[ ']*[a-zA-Z_]+[ ']*(\))[ ]*"
+#'                 
+#'     )
+#'     
+#'     kkk <- unlist(lapply( 1:length(rules), function(i) { 
+#'       ret <- c()
+#'       ooo <- unique(str_trim(str_extract_all(stringa, rules[i])[[1]]))
+#'       for( k in ooo ) ret <- c(ret, c(k , names(rules)[i]))
+#'       return(ret)
+#'     }))
+#'     kkk <- matrix(kkk, ncol=2, byrow = T)
+#'     kkk <- cbind(kkk, rep("",nrow(kkk)))
+#'     colnames(kkk)<-c("rule","operator","value")
+#'     
+#'     for( riga in 1:nrow(kkk) ) {
+#'       kkk[riga,"value"] <- strAtomicSolver( ID, kkk[riga,1] , kkk[riga,2] )
+#'     }
+#'     
+#'     # ora rimpiazza i valori di verita'
+#'     for( riga in 1:nrow(kkk) ) {
+#'       stringa <- str_replace_all(string = stringa,pattern = as.character(kkk[riga,"rule"]),replacement = kkk[riga,"value"])
+#'     }
+#'     
+#'     # EVAL: costruisci il risultato
+#'     RISULTATO <- eval(expr = parse(text = stringa))
+#' 
+#'     return( list("res"=RISULTATO, "TF.table"=kkk) )
+#'   }
+#'   #=================================================================================
+#'   # strAtomicSolver
+#'   #=================================================================================   
+#'   strAtomicSolver <- function( ID, stringa, operator ) {
+#'     
+#'     sinonimi <- unlist(global.processInstances.toSymbol)
+#'     names(sinonimi) <- names(global.processInstances.toSymbol)
+#'     
+#'     ooo <- str_split(stringa , operator)[[1]]
+#'     first.o <- str_trim(ooo[1])
+#'     second.o <- str_trim(ooo[2])
+#'     
+#'     if(substr(first.o,1,1) == "'" & substr(first.o,str_length(first.o),str_length(first.o)) == "'") {
+#'       first.o <- str_trim(str_replace_all(first.o,"'",""))
+#'     } else {
+#'       first.o <- names(sinonimi)[which(sinonimi %in% first.o)]
+#'     }
+#'     
+#'     if(substr(second.o,1,1) == "'" & substr(second.o,str_length(second.o),str_length(second.o)) == "'") {
+#'       second.o <- str_trim(str_replace_all(second.o,"'",""))
+#'     } else {
+#'       second.o <- names(sinonimi)[which(sinonimi %in% second.o)]
+#'     }
+#' 
+#'     MMM <- rbind( c(-1,ID,"","BEGIN",0),global.dataLoader$pat.process[[ID]])
+#'     MMM <- rbind( MMM, c(-999,ID,"","END", max(MMM$pMineR.deltaDate)))
+#'     # event.sequence <- c("BEGIN",global.dataLoader$pat.process[[ID]][, global.dataLoader$csv.EVENTName],"END")
+#'     
+#'     output.riga <- c()
+#'     output.tempi <- c()
+#'     trovato <- FALSE; tempo.calcolato <- ""
+#'     for( riga in 1:nrow(MMM)) {
+#'       trovato <- FALSE; tempo.calcolato <- ""
+#'       if(MMM[riga,global.dataLoader$csv.EVENTName] == first.o) {
+#'         # estrai le righe corrispondenti al numero di eventi in avanti da indagare
+#'         if( operator == "->" | operator == "!->") row.2.search <- riga+1
+#'         if( operator == "-->" | operator == "!-->") row.2.search <- riga:nrow(MMM)
+#'         # ora scorrili tutti e guarda quando trova un'occorrenza
+#'         trovato <- FALSE; tempo.calcolato <- ""
+#'         for( righe2Check in row.2.search) {
+#'           trovato <- (second.o == MMM[righe2Check,global.dataLoader$csv.EVENTName] )
+#'           if ( trovato == TRUE ) {
+#'             tempo.calcolato <- as.numeric(MMM[righe2Check,"pMineR.deltaDate"])-as.numeric(MMM[riga,"pMineR.deltaDate"])  
+#'             break;
+#'           }
+#'         }
+#'         # Considera un TRUE, se lo trovi. Questo perche' di default tutte le ricerche 
+#'         # si basano sulla prima occorrenza trovata: vedi se il true diventa false e/o viceversa:  
+#'         risultato <- trovato
+#'         output.riga <- c( output.riga , risultato )
+#'         output.tempi <- c( output.tempi , tempo.calcolato )
+#'       } else { 
+#'         output.riga <- c( output.riga , "" )
+#'         output.tempi <- c( output.tempi , "" ) 
+#'       }
+#'     }
+#'     
+#'     browser()
+#'     toRet <- list()
+#'     toRet.array <- output.riga
+#'     toREt.time <- output.tempi
+#'     toRet.any <- ( sum( output.riga==TRUE ) == sum( output.riga != "" ) )
+#'     toRet.some <- ( sum(output.riga==TRUE) != 0 )
+#'     return( toRet )
+#'     # 
+#'     # 
+#'     # browser() 
+#'     # FO <- which( event.sequence %in% first.o)
+#'     # SO <- which( event.sequence %in% second.o)
+#'     # 
+#'     # if( operator == "->") {
+#'     #   if (sum(unlist(lapply( FO, function(i) { (i+1) %in% SO} ))) == 0 ) return( "FALSE" )
+#'     #   else return( "TRUE" )
+#'     # }
+#'     # if( operator == "!->") {
+#'     #   if (sum(unlist(lapply( FO, function(i) { (i+1) %in% SO} ))) == 0 ) return( "FALSE" )
+#'     #   else return( "TRUE" )
+#'     # }    
+#'     # if( operator == "-->") {
+#'     #   if (sum(unlist(lapply( FO, function(i) { i < SO} ))) == 0 ) return( "FALSE" )
+#'     #   else return( "TRUE" )
+#'     # }    
+#'     # if( operator == "!-->") {
+#'     #   if (sum(unlist(lapply( FO, function(i) { i < SO} ))) == 0 ) return( "TRUE" )
+#'     #   else return( "FALSE" )
+#'     # }        
+#'   }
+#'   #=================================================================================
+#'   # getStats
+#'   #=================================================================================  
+#'   getStats <- function()  {
+#'     matriceAlias <- c()
+#'     if(length(names(global.processInstances.toSymbol)) > 0) {
+#'       matriceAlias <- cbind( names(global.processInstances.toSymbol), unlist(global.processInstances.toSymbol))
+#'       colnames(matriceAlias)<-c("Event","Alias")      
+#'     }
+#' 
+#'     return(
+#'       list(
+#'         "EFPTs" = global.EFPTs,
+#'         "events" = global.dataLoader$arrayAssociativo,
+#'         "aliases" = matriceAlias
+#'       )
+#'     )
+#'   }    
+#'   #=================================================================================
+#'   # clearAttributes
+#'   #=================================================================================
+#'   clearAttributes<-function() {
+#'     costructor();
+#'   }  
+#'   #===========================================================
+#'   # costructor
+#'   # E' il costruttore della classe
+#'   #===========================================================
+#'   costructor<-function() {
+#'     global.processInstances.toSymbol <<- list()
+#'     global.dataLoader <<- ''
+#'     global.EFPTs <<- c()
+#'   }
+#'   #===========================================================
+#'   costructor();
+#'   #===========================================================
+#'   return( list(
+#'     "loadDataset"=loadDataset,
+#'     "defineAlias"=defineAlias,
+#'     "getStats"=getStats,
+#'     "checkRule"=checkRule
+#'   ) )
+#'   
+#' }
