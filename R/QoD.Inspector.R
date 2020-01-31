@@ -33,24 +33,32 @@ QoDInspector <- function() {
                          arr.ev.pass.through = c(), 
                          arr.ev.pass.not.through = c(),
                          arr.trapped.at = c(),
-                         arr.global.counting.rules = c(),
-                         arr.local.counting.rules = c(),
+                         arr.some.global.counting.rules = c(),
+                         arr.some.local.counting.rules = c(),
                          arr.additional.timing.rules = c(),
                          verboseReturn = FALSE ) {
     
     arr.ID <- names(global.dataLoader$pat.process)
+    original.arr.ID <- arr.ID
     
     ID.true <- c()
     ID.false <- c()
     ID.trapped <- c()    
     
-    if( length(arr.global.counting.rules) > 0 ) {
-      for( regola in arr.global.counting.rules ) {
+    if( length(arr.some.global.counting.rules) > 0 ) {
+      for( regola in arr.some.global.counting.rules ) {
         aaa <- checkRule( regola , verboseReturn = FALSE)
         arr.ID <- intersect( arr.ID , aaa )
       }
     }
-    ID.false <- c(ID.false,names(global.dataLoader$pat.process)[!(names(global.dataLoader$pat.process) %in% arr.ID)])
+    arr.global.timing.rules <- c()
+    if( length(arr.global.timing.rules) > 0 ) {
+      for( regola in arr.global.timing.rules ) {
+        aaa <- checkRule( regola , verboseReturn = FALSE, countingRules = FALSE)
+        arr.ID <- intersect( arr.ID , aaa )
+      }
+    }    
+    ID.false <- c(ID.false,original.arr.ID[!(original.arr.ID %in% arr.ID)])
     
     # inizia ad analizzare gli eventi
     for( ID in arr.ID ) {
@@ -84,9 +92,9 @@ QoDInspector <- function() {
       # Se il paziente avesse avuto un percorso di successo, verifica le local
       # counting and timing rules
       if( finito == TRUE ) {
-        if( length(arr.local.counting.rules) > 0 ) {
+        if( length(arr.some.local.counting.rules) > 0 ) {
           event.subsequence <- event.sequence[startFrom:indice]
-          for( regola in arr.local.counting.rules) {
+          for( regola in arr.some.local.counting.rules) {
             risultato <- strParser(ID = ID, stringa = regola, evt.sequence = event.subsequence, verboseReturn = FALSE )
             # se il risultato e' FALSE fai si' che il resto dei controlli lo inseriscano come opportuno
             # (nell'array degli ID.false)
@@ -123,15 +131,15 @@ QoDInspector <- function() {
     return( list( "TRUE" = ID.true , "FALSE" = ID.false, "TRAPPED" = ID.trapped)   )
   }   
   #=================================================================================
-  # strParser
+  # checkRule
   #=================================================================================  
-  checkRule <- function( stringa , verboseReturn = TRUE ) {
+  checkRule <- function( stringa , verboseReturn = TRUE , countingRules = TRUE) {
     arr.ID <- names(global.dataLoader$pat.process)
     res <- list()
     for( ID in arr.ID ) {
-      res[[ID]] <- strParser( ID, stringa )
+      res[[ID]] <- strParser( ID, stringa , countingRules = countingRules )
     }
-    
+    browser()
     IDD.true <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
     IDD.false <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == FALSE ) return( names(res)[i] )}))
     
@@ -147,14 +155,14 @@ QoDInspector <- function() {
   #=================================================================================
   # strParser
   #=================================================================================  
-  strParser <- function( ID, stringa , evt.sequence=c() ,verboseReturn = TRUE ) {
+  strParser <- function( ID, stringa , evt.sequence=c() ,verboseReturn = TRUE , countingRules = TRUE ) {
     
     rules <- c( "->" = "[ ']*[a-zA-Z_]+[ ']*(->)[ ']*[a-zA-Z_]+[ ']*",
                 "-->" = "[ ']*[a-zA-Z_]+[ ']*(-->)[ ']*[a-zA-Z_]+[ ']*",
                 "!->" = "[ ']*[a-zA-Z_]+[ ']*(!->)[ ']*[a-zA-Z_]+[ ']*",
                 "!-->" = "[ ']*[a-zA-Z_]+[ ']*(!-->)[ ']*[a-zA-Z_]+[ ']*"
     )
-    
+    # browser()
     kkk <- unlist(lapply( 1:length(rules), function(i) { 
       ret <- c()
       ooo <- unique(str_trim(str_extract_all(stringa, rules[i])[[1]]))
@@ -166,7 +174,8 @@ QoDInspector <- function() {
     colnames(kkk)<-c("rule","operator","value")
     
     for( riga in 1:nrow(kkk) ) {
-      kkk[riga,"value"] <- strAtomicSolver( ID, kkk[riga,1] , kkk[riga,2] , evt.sequence = evt.sequence)
+      kkk[riga,"value"] <- strAtomicSolver( ID, kkk[riga,1] , kkk[riga,2] , 
+                                            evt.sequence = evt.sequence , countingRules = countingRules )
     }
     # browser()
     # ora rimpiazza i valori di verita'
@@ -188,7 +197,7 @@ QoDInspector <- function() {
   #=================================================================================
   # strAtomicSolver
   #=================================================================================   
-  strAtomicSolver <- function( ID, stringa, operator , evt.sequence = c()) {
+  strAtomicSolver <- function( ID, stringa, operator , evt.sequence = c() , countingRules = TRUE) {
     
     sinonimi <- unlist(global.processInstances.toSymbol)
     names(sinonimi) <- names(global.processInstances.toSymbol)
@@ -213,21 +222,59 @@ QoDInspector <- function() {
       event.sequence <- c("BEGIN",global.dataLoader$pat.process[[ID]][, global.dataLoader$csv.EVENTName],"END")
     else 
       event.sequence <- c("BEGIN",evt.sequence,"END")
+
+    arr.FO <- which( event.sequence %in% first.o)
+    arr.SO <- which( event.sequence %in% second.o)
+    arr.FO.t <- c()
+    arr.SO.t <- c()
     
-    FO <- which( event.sequence %in% first.o)
-    SO <- which( event.sequence %in% second.o)
+    if( length(arr.FO) > 0 ) {
+      for(i in 1:length(arr.FO)) {
+        if( arr.FO[i] > 1 ) { arr.FO.t <- c( arr.FO.t, global.dataLoader$pat.process[[ID]][arr.FO[i]-1,"pMineR.deltaDate"]) } 
+      }
+    } 
+    if( length(arr.SO) > 0 ) {
+      for( i in 1:length(arr.SO) ) {
+        if( arr.SO[i] > 1 ) { arr.SO.t <- c(arr.SO.t,global.dataLoader$pat.process[[ID]][arr.SO[i]-2,"pMineR.deltaDate"]) }
+      }
+    }
+    
+    # if( length(FO) > 0 ) {
+    #   if( FO > 1 ) { FO.t <- global.dataLoader$pat.process[[ID]][FO-1,"pMineR.deltaDate"] } else { FO.t <- 0 }
+    # } else { FO.t <- 0 }
+    # if( length(SO) ) {
+    #   if( SO > 1 ) { SO.t <- global.dataLoader$pat.process[[ID]][SO-2,"pMineR.deltaDate"] } else { SO.t <- 0 }
+    # } else { SO.t <- 0 }
+    browser()
+    cat("FO e SO possono essere array. qui ci devi mettere la logica some vs all")
 
     if( operator == "->") {
-      return( sum(unlist(lapply( FO, function(i) { (i+1) %in% SO} ))) )
+      if( countingRules == TRUE ) {
+        return( sum(unlist(lapply( arr.FO, function(i) { (i+1) %in% arr.SO} ))) )
+      } else {
+        browser()
+      }
     }
     if( operator == "!->") {
-      return( sum(unlist(lapply( FO, function(i) { (i+1) %in% SO} ))) )
+      if( countingRules == TRUE ) {
+        return( sum(unlist(lapply( arr.FO, function(i) { (i+1) %in% arr.SO} ))) )
+      } else {
+        browser()
+      }
     }    
     if( operator == "-->") {
-      return( sum(unlist(lapply( FO, function(i) { i < SO} )))  )
+      if( countingRules == TRUE ) {
+        return( sum(unlist(lapply( arr.FO, function(i) { i < arr.SO} )))  )
+      } else {
+        browser()
+      }
     }    
     if( operator == "!-->") {
-      return( sum(unlist(lapply( FO, function(i) { i < SO} ))  ) )
+      if( countingRules == TRUE ) {
+        return( sum(unlist(lapply( arr.FO, function(i) { i < arr.SO} ))  ) )
+      } else {
+        browser()
+      }
     }        
   }
   #=================================================================================
