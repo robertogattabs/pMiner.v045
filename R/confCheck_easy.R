@@ -417,7 +417,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     }
 
     link.results <- WF.struct$linked.PWF.obj.computation.results
-
+    
     return(list(
       "list.fired.trigger"=list.fired.trigger,
       "list.final.states"=list.final.states,
@@ -947,6 +947,8 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       if(local.conflitto>0) {
         conflicting.Triggers <- tabella[which( tabella[,"pri"]==as.character(i) ),"trigger"]
         errMsg <- c("Set e unset conflicting. Check the following triggers: ",paste( conflicting.Triggers,collapse=','  ));
+        print(tabella)
+        # browser()
         errore = TRUE;
         obj.LogHandler$sendLog(msg = errMsg, type="NMI")
       }
