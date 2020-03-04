@@ -4,8 +4,11 @@
 \alias{calcolaFootPrintTable.pat.process}
 \title{calcola FT}
 \usage{
-calcolaFootPrintTable.pat.process(dataLoaderOBJ, skip.less.than = 0,
-  threshold.perc = 1e-08)
+calcolaFootPrintTable.pat.process(
+  dataLoaderOBJ,
+  skip.less.than = 0,
+  threshold.perc = 1e-08
+)
 }
 \description{
 Funzione per calcolare la FM

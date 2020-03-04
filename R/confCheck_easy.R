@@ -2252,7 +2252,13 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
     ID.skippati <-c()
     for( ID in PatID ) {
       toProcess <- TRUE
+      # -im (2)
+      if( length(res$list.computation.matrix$stati.timeline[[ID]]) <= 4 )  {
+        toProcess <- FALSE; ID.skippati <- c( ID.skippati , ID ) 
+      }
+      # -fm (2)
       # -im 
+      cat("\n ID=",ID)
       if( !(ID %in% names(res$list.computation.matrix$stati.timeline))) {
         toProcess <- FALSE; ID.skippati <- c( ID.skippati , ID ) 
       }

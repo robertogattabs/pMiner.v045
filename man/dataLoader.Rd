@@ -4,8 +4,11 @@
 \alias{dataLoader}
 \title{Load the event-logs}
 \usage{
-dataLoader(verbose.mode = TRUE, max.char.length.label = 50,
-  save.memory = FALSE)
+dataLoader(
+  verbose.mode = TRUE,
+  max.char.length.label = 50,
+  save.memory = FALSE
+)
 }
 \arguments{
 \item{verbose.mode}{boolean. If TRUE some messages will appear in console, during the computation; otherwise the computation will be silent.}

@@ -4,10 +4,17 @@
 \alias{plotPatientReplayedTimelineFunction}
 \title{Some useful tools new version}
 \usage{
-plotPatientReplayedTimelineFunction(list.computation.matrix, patientID,
-  text.cex = 0.7, y.intra.gap = 40, x.offset = 100, thickness = 5,
-  bar.border = "Navy", bar.volume = "lightsteelblue1",
-  text.date.cex = 0.6)
+plotPatientReplayedTimelineFunction(
+  list.computation.matrix,
+  patientID,
+  text.cex = 0.7,
+  y.intra.gap = 40,
+  x.offset = 100,
+  thickness = 5,
+  bar.border = "Navy",
+  bar.volume = "lightsteelblue1",
+  text.date.cex = 0.6
+)
 }
 \description{
 A class which provide some tools. pMineR intarnal use only. wow

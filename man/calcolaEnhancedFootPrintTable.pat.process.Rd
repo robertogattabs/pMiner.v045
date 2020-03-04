@@ -4,8 +4,11 @@
 \alias{calcolaEnhancedFootPrintTable.pat.process}
 \title{calcola EFT}
 \usage{
-calcolaEnhancedFootPrintTable.pat.process(dataLoaderOBJ, skip.less.than = 0,
-  threshold.perc = 1e-08)
+calcolaEnhancedFootPrintTable.pat.process(
+  dataLoaderOBJ,
+  skip.less.than = 0,
+  threshold.perc = 1e-08
+)
 }
 \description{
 Funzione per calcolare la EFM

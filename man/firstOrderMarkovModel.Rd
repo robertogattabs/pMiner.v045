@@ -19,6 +19,7 @@ This is an implementation of the First Order Markov Model (firstOrderMarkovModel
                \item \code{replay( ) } re-play a given event log on the internal FOMM model
                \item \code{play( ) } play the internal FOMM model a desired number of times, in order to simulate new event-logs. This methods can also, if desired, simulate event-logs which does not complies with the internal FOMM model.
                \item \code{plot( ) } plot the internal model
+               \item \code{KaplanMeier( ) } build a Kaplan Meier curve through an indicated pathway
                \item \code{distanceFrom( ) } calculate the scalar distance to another passed FOMM model, passed as argument. The default metric returns a scalar value
                \item \code{getModel( ) } return the trained internal FOMM model
                \item \code{getInstanceClass( ) } return the instance class Name and description (version, etc.)
