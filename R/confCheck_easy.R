@@ -1290,7 +1290,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
   #===========================================================
   plot.replay.result<-function( whatToCount='activations' ,     kindOfNumber='relative',
                                    avoidFinalStates=c(), avoidTransitionOnStates=c(), avoidToFireTrigger=c(),
-                                whichPatientID=c("*"), plot.unfired.Triggers = TRUE,
+                                whichPatientID=c("*"), plot.unfired.Triggers = FALSE,
                                 giveBack.grVizScript = FALSE
                                 ) {
 
