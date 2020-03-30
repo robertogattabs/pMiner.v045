@@ -236,7 +236,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
   #===========================================================
   KaplanMeier<-function( fromState, toState, 
                          passingThrough=c(), passingNotThrough=c(), stoppingAt=c(), 
-                         stoppingNotAt=c(), PDVAt=c(), withPatientID=c() )  {
+                         stoppingNotAt=c(), PDVAt=c(), withPatientID=c() , UM="mins" )  {
     
     
     res <- lapply( MM.pat.process , function(x)  {
@@ -325,6 +325,12 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
     matrice.KM <- as.data.frame(matrice.KM)
     matrice.KM$time <- as.numeric(levels(matrice.KM$time))[matrice.KM$time]
     matrice.KM$outcome <- as.numeric(levels(matrice.KM$outcome))[matrice.KM$outcome]
+    
+    if( UM == "days") matrice.KM$time <- matrice.KM$time / 1440
+    if( UM == "hours") matrice.KM$time <- matrice.KM$time / 60
+    if( UM == "weeks") matrice.KM$time <- matrice.KM$time / (1440 * 7)
+    if( UM == "months") matrice.KM$time <- matrice.KM$time / (43800)
+      
     
     KM0 <- survfit(Surv(time, outcome)~1,   data=matrice.KM)
     
