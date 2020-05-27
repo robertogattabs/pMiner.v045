@@ -48,7 +48,7 @@ careflowMining<-function( parameters.list = list() ) {
     
     ######## Pre-processing
     # build mat_data (flattened event log without dates)
-    
+    # browser()
     time.unit.global <<- time.unit
     
     mat_data_names <- c("ID",seq(1:parameters$max.length))
@@ -79,7 +79,7 @@ careflowMining<-function( parameters.list = list() ) {
     mat <- list("mat_data"=mat_data,"mat_date_start"=mat_date_start,"mat_date_end"=mat_date_end)
     
     ######## End Pre-processing
-    
+    # browser()
     ######## Begin Mining
     
     selected<-selection(mat$mat_data,parameters$support.th)
@@ -335,7 +335,7 @@ careflowMining<-function( parameters.list = list() ) {
   #===========================================================
   # plotModel
   #===========================================================
-  plot<-function( kindOfOutput ="time") {
+  plot<-function( kindOfOutput ="time", color.metric="topology") {
     
     graphics <- list()
     bb <- getHistoryData()
@@ -351,7 +351,7 @@ careflowMining<-function( parameters.list = list() ) {
         IDsTOTTime <- bb$IDsTOTTime[[hist]]
         nodeTemp<-c()
         arches<-c()
-        
+        # browser()
         for (k in 1:nrow(HistMined)){
           # Create a simple NODES
           for (j in 1:ncol(HistMined)){
@@ -555,7 +555,7 @@ careflowMining<-function( parameters.list = list() ) {
                                    edges_df = edges)
         
         graph_tmp$global_attrs[1,"value"] <- "dot"
-        browser()
+        # browser()
         render_graph(graph_tmp)
         graphics[[hist]] <- graph_tmp
         

@@ -328,8 +328,8 @@ dataLoader<-function( verbose.mode = TRUE, max.char.length.label = 50, save.memo
     obj.Utils <- utils()
     clearAttributes( );
     param.column.names<<-colnames(mydata)
-    
-    # stocazzo <- mydata
+    # browser()
+    stocazzo <- mydata
 
     if(length(mydata[[dateColumnName]]) == 0) { obj.LH$sendLog( c("dateColumnName '",dateColumnName,"' not present! ")  ,"ERR"); return() }
     if(length(mydata[[EVENTName]]) == 0) { obj.LH$sendLog( c("EVENTName '",EVENTName,"' not present! ")  ,"ERR"); return() }
