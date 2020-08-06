@@ -63,7 +63,7 @@ QoDInspector <- function( UM = "" ) {
     
     # inizia ad analizzare gli eventi
     for( ID in arr.ID ) {
-      event.sequence <- c("BEGIN",global.dataLoader$pat.process[[ID]][, global.dataLoader$csv.EVENTName],"END")
+      # event.sequence <- c("BEGIN",global.dataLoader$pat.process[[ID]][, global.dataLoader$csv.EVENTName],"END")
       startFrom <- which(arr.ev.from %in% event.sequence)
       finito <- FALSE; trappato <- FALSE; PNT.attivato <- FALSE; PT.attivato <- FALSE; iniziato <- FALSE
       if( length(arr.ev.pass.through) == 0 ) PT.attivato <- TRUE
@@ -89,7 +89,7 @@ QoDInspector <- function( UM = "" ) {
           if( finito == TRUE | trappato == TRUE | PNT.attivato == TRUE ) break;
         }
       }
-      
+      # browser()
       # Se il paziente avesse avuto un percorso di successo, verifica le local
       # counting and timing rules
       if( finito == TRUE ) {
@@ -134,21 +134,43 @@ QoDInspector <- function( UM = "" ) {
   #=================================================================================
   # checkRule
   #=================================================================================  
-  checkRule <- function( stringa , verboseReturn = TRUE , countingRules = TRUE) {
+  checkRule <- function( stringa ,  verboseReturn = TRUE , countingRules = TRUE) {
     arr.ID <- names(global.dataLoader$pat.process)
     res <- list()
     for( ID in arr.ID ) {
-      res[[ID]] <- strParser( ID, stringa , countingRules = countingRules )
-      browser()
+      # browser()
+      evt.sequence <- global.dataLoader$pat.process[[ID]][[global.dataLoader$csv.EVENTName]]
+      # evt.sequence <- c("BEGIN",evt.sequence,"END")
+      res[[ID]] <- strParser( ID, stringa , countingRules = countingRules, evt.sequence= evt.sequence )
+      # browser() 
+      # 1077086
     }
-    browser()
-    IDD.true <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
-    IDD.false <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == FALSE ) return( names(res)[i] )}))
+    # browser()
+    # IDD.true <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == TRUE ) return( names(res)[i] )}))
+    # IDD.false <- unlist(lapply( 1:length(res) , function(i) { if(res[[i]]$res == FALSE ) return( names(res)[i] )}))
     
+    
+    MM <- c()
+    tmp.1 <- lapply(names(res), function( ID ) {  
+        # if(length(res[[ID]]$res) > 0 )  {
+          MM <<- rbind( MM , cbind( rep( ID, nrow(res[[ID]]$res ) ), res[[ID]]$res ) )
+        # } 
+      })
+    si <- c()
+    no <- c()
+    tmp.1 <- lapply( names(res), function(ID){ if( res[[ID]]$esito == TRUE ) {si <<- c( si , ID)} })
+    tmp.1 <- lapply( names(res), function(ID){ if( res[[ID]]$esito == FALSE ) {no <<- c( no , ID)} })
+    
+    # browser()
+    
+    # lapply(names(res), function(ID)  {   MM <<- rbind( MM , cbind(rep(ID,length(res[[ID]]$res)),res[[ID]]$res) ) }   )
+    # browser()
     toReturn <- list()
     toReturn$details <- res
-    toReturn$IDD.true <- IDD.true
-    toReturn$IDD.false <- IDD.false
+    toReturn$yes <- si
+    toReturn$no <- no
+    # toReturn$IDD.true <- IDD.true
+    # toReturn$IDD.false <- IDD.false
     
     if( verboseReturn == FALSE ) return ( IDD.true )
     
@@ -157,10 +179,14 @@ QoDInspector <- function( UM = "" ) {
   #=================================================================================
   # strParser
   #=================================================================================  
-  strParser <- function( ID, stringa , evt.sequence=c() ,verboseReturn = TRUE , countingRules = TRUE ) {
+  strParser <- function( ID, stringa , evt.sequence ,verboseReturn = TRUE , countingRules = TRUE ) {
     
-    rules <- c( "->" = "[ ']*[a-zA-Z_]+[ ']*(->)[ ']*[a-zA-Z_]+[ ']*",
-                "-->" = "[ ']*[a-zA-Z_]+[ ']*(-->)[ ']*[a-zA-Z_]+[ ']*"
+    # str_extract_all(string = "('a' -> 'b' & 'c' -> 'ggui') | 'dfds' -> 'dfs' ",pattern = "[ ']*[a-zA-Z_ ]+[ ']*(->)[ ']*[a-zA-Z_ ]+[ ']*")
+    
+    rules <- c( "->" = "[ ']*[a-zA-Z_ ]+[']*(->)[ ']*[a-zA-Z_ ]+[']*",
+                "-->" = "[ ']*[a-zA-Z_ ]+[']*(-->)[ ']*[a-zA-Z_ ]+[']*",
+                "-X" = "[ ']*[a-zA-Z_ ]+[']*(-X)[ ']*[a-zA-Z_ ]+[']*",
+                "--X" = "[ ']*[a-zA-Z_ ]+[']*(--X)[ ']*[a-zA-Z_ ]+[']*"
     )
     # browser()
     kkk <- unlist(lapply( 1:length(rules), function(i) { 
@@ -173,35 +199,58 @@ QoDInspector <- function( UM = "" ) {
     kkk <- cbind(kkk, rep("",nrow(kkk)))
     colnames(kkk)<-c("rule","operator","value")
     
-    for( riga in 1:nrow(kkk) ) {
-      kkk[riga,"value"] <- strAtomicSolver( ID, kkk[riga,1] , kkk[riga,2] , 
-                                            evt.sequence = evt.sequence , conditionOnTime = countingRules )
-    }
-    # browser()
-    # ora rimpiazza i valori di verita'
-    for( riga in 1:nrow(kkk) ) {
-      stringa <- str_replace_all(string = stringa,pattern = as.character(kkk[riga,"rule"]),replacement = kkk[riga,"value"])
-    }
+    # for( riga in 1:nrow(kkk) ) {
+    riga <- 1
+    risultato <- strAtomicSolver( ID, kkk[riga,1] , kkk[riga,2] , 
+                                          evt.sequence = evt.sequence , conditionOnTime = countingRules )
     
-    # EVAL: costruisci il risultato
-    RISULTATO <- eval(expr = parse(text = stringa))
-    if( verboseReturn == TRUE ) {
-      res <- list("res"=RISULTATO, "TF.table"=kkk)      
+    if( is.na(sum(risultato$ret)) || sum(risultato$ret)==0 ) {
+      risultato$esito <- FALSE  
     } else {
-      res <- RISULTATO
+      risultato$esito <- TRUE
     }
     
+    # browser()
+    # kkk[riga,"value"] <- risultato$ret
+    # browser()
+    if(kkk[1,"operator"]=="->" || kkk[1,"operator"]=="-->") {
+      numero.che.soddisfano <- sum(risultato$res[,kkk[1,"operator"]] == "x")  
+    }
+    # if(kkk[1,"operator"]=="-X" || kkk[1,"operator"]=="--X") {
+    #   numero.che.soddisfano <- sum(risultato$res[,kkk[1,"operator"]] == "x")  
+    # }
     
+# cio' che segue e' roba vecchia
+    # -im
+    # browser()
+    # # }
+    # # browser()
+    # # ora rimpiazza i valori di verita'
+    # for( riga in 1:nrow(kkk) ) {
+    #   stringa <- str_replace_all(string = stringa,pattern = as.character(kkk[riga,"rule"]),replacement = kkk[riga,"value"])
+    # }
+    # 
+    # # EVAL: costruisci il risultato
+    # RISULTATO <- eval(expr = parse(text = stringa))
+    # if( verboseReturn == TRUE ) {
+    #   res <- list("res"=RISULTATO, "TF.table"=kkk)      
+    # } else {
+    #   res <- RISULTATO
+    # }
+    res <- risultato
+    # -fm
+    
+    # browser()
     return( res )
   }
   #=================================================================================
   # strAtomicSolver
   #=================================================================================   
-  strAtomicSolver <- function( ID, stringa, operator , evt.sequence = c() , conditionOnTime = FALSE ) {
+  strAtomicSolver <- function( ID, stringa, operator , evt.sequence  , conditionOnTime = FALSE ) {
     
     sinonimi <- unlist(global.processInstances.toSymbol)
     names(sinonimi) <- names(global.processInstances.toSymbol)
-    
+    # browser()
     ooo <- str_split(stringa , operator)[[1]]
     first.o <- str_trim(ooo[1])
     second.o <- str_trim(ooo[2])      
@@ -249,43 +298,68 @@ QoDInspector <- function( UM = "" ) {
     colnames(tmpQWE)<-c("From","To")
     tmpQWE <- cbind(tmpQWE, "->"=rep("",nrow(tmpQWE)))
     tmpQWE <- cbind(tmpQWE, "-->"=rep("",nrow(tmpQWE)))
-    tmpQWE <- cbind(tmpQWE, "->(t)"=rep("",nrow(tmpQWE)))
-    tmpQWE <- cbind(tmpQWE, "-->(t)"=rep("",nrow(tmpQWE)))
+    tmpQWE <- cbind(tmpQWE, "-X"=rep("",nrow(tmpQWE)))
+    tmpQWE <- cbind(tmpQWE, "--X"=rep("",nrow(tmpQWE)))
     tmpQWE <- as.matrix(tmpQWE)
+# browser()
 
-    tmp <- lapply( 1:nrow(tmpQWE), function(riga) { if( as.numeric(tmpQWE[riga,"To"])==(as.numeric(tmpQWE[riga,"From"])+1) ) tmpQWE[riga,"->"]<<-"x"  } )
-    tmp <- lapply( 1:nrow(tmpQWE), function(riga) { if( as.numeric(tmpQWE[riga,"To"])>as.numeric(tmpQWE[riga,"From"]) ) {tmpQWE[riga,"-->"]<<-"x"}  } ) 
-
-    tmp <- lapply( 1:nrow(tmpQWE), function(riga) { if( tmpQWE[riga,"->"] == "x" ) tmpQWE[riga,"->(t)"] <<- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"To"])-1,"pMineR.deltaDate"] - global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"From"])-1,"pMineR.deltaDate"] })
-    tmp <- lapply( 1:nrow(tmpQWE), function(riga) { if( tmpQWE[riga,"-->"] == "x" ) tmpQWE[riga,"-->(t)"] <<- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"To"])-1,"pMineR.deltaDate"] - global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"From"])-1,"pMineR.deltaDate"] })
-
-    if( global.UM=="hours" ) tmpQWE[,"-->(t)"] <- as.numeric(tmpQWE[,"-->(t)"])/60
-    if( global.UM=="hours" ) tmpQWE[,"->(t)"] <- as.numeric(tmpQWE[,"->(t)"])/60
-    if( global.UM=="days" ) tmpQWE[,"-->(t)"] <- as.numeric(tmpQWE[,"-->(t)"])/(60*24)
-    if( global.UM=="days" ) tmpQWE[,"->(t)"] <- as.numeric(tmpQWE[,"->(t)"])/(60*24)
-    if( global.UM=="weeks" ) tmpQWE[,"-->(t)"] <- as.numeric(tmpQWE[,"-->(t)"])/(60*24*7)
-    if( global.UM=="weeks" ) tmpQWE[,"->(t)"] <- as.numeric(tmpQWE[,"->(t)"])/(60*24*7)
-    if( global.UM=="months" ) tmpQWE[,"-->(t)"] <- as.numeric(tmpQWE[,"-->(t)"])/(60*24*7*30)
-    if( global.UM=="months" ) tmpQWE[,"->(t)"] <- as.numeric(tmpQWE[,"->(t)"])/(60*24*7*30)    
-    tmpQWE[,"->(t)"][which(is.na(tmpQWE[,"->(t)"]))] <- ""
-    tmpQWE[,"-->(t)"][which(is.na(tmpQWE[,"-->(t)"]))] <- ""
-    
-    if( operator == "->" ) {
-      if( conditionOnTime == TRUE ) {
-        ret <- as.numeric(tmpQWE[,"->(t)"][tmpQWE[,"->(t)"]!=""])
-      } else {
-        ret <- as.numeric(tmpQWE[,"->"])
+    if( nrow(tmpQWE) != 0 ) {
+      tmp <- lapply( 1:nrow(tmpQWE), function(riga) { if( as.numeric(tmpQWE[riga,"To"])==(as.numeric(tmpQWE[riga,"From"])+1) ) tmpQWE[riga,"->"]<<-"x"  } )
+      tmp <- lapply( 1:nrow(tmpQWE), function(riga) { if( as.numeric(tmpQWE[riga,"To"])>as.numeric(tmpQWE[riga,"From"]) ) {tmpQWE[riga,"-->"]<<-"x"}  } ) 
+  # browser()
+      tmp <- lapply( 1:nrow(tmpQWE), function(riga) { 
+                      if( tmpQWE[riga,"->"] == "x" )  {
+                        if( as.numeric(tmpQWE[riga,"From"]) >  1 ) from <- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"From"])-1,"pMineR.deltaDate"]
+                        if( as.numeric(tmpQWE[riga,"From"]) <=  1 ) from <- 0
+                        if( event.sequence[as.numeric(tmpQWE[riga,"To"])] == "END" ) to <- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"To"])-2,"pMineR.deltaDate"]
+                        if( event.sequence[as.numeric(tmpQWE[riga,"To"])] != "END" ) to <- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"To"])-1,"pMineR.deltaDate"]
+                        tmpQWE[riga,"-X"] <<- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"To"])-1,"pMineR.deltaDate"] - from
+                      }
+                    })
+      tmp <- lapply( 1:nrow(tmpQWE), function(riga) { 
+                      if( tmpQWE[riga,"-->"] == "x" ) 
+                      {  
+                        if( as.numeric(tmpQWE[riga,"From"]) >  1 ) from <- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"From"])-1,"pMineR.deltaDate"]
+                        if( as.numeric(tmpQWE[riga,"From"]) <= 1 ) from <- 0
+                        if( event.sequence[as.numeric(tmpQWE[riga,"To"])] == "END" ) to <- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"To"])-2,"pMineR.deltaDate"]
+                        if( event.sequence[as.numeric(tmpQWE[riga,"To"])] != "END" ) to <- global.dataLoader$pat.process[[ID]][as.numeric(tmpQWE[riga,"To"])-1,"pMineR.deltaDate"]
+                        tmpQWE[riga,"--X"] <<- to - from
+                      }
+                    })
+  
+      if( global.UM=="hours" ) tmpQWE[,"--X"] <- as.numeric(tmpQWE[,"--X"])/60
+      if( global.UM=="hours" ) tmpQWE[,"-X"] <- as.numeric(tmpQWE[,"-X"])/60
+      if( global.UM=="days" ) tmpQWE[,"--X"] <- as.numeric(tmpQWE[,"--X"])/(60*24)
+      if( global.UM=="days" ) tmpQWE[,"-X"] <- as.numeric(tmpQWE[,"-X"])/(60*24)
+      if( global.UM=="weeks" ) tmpQWE[,"--X"] <- as.numeric(tmpQWE[,"--X"])/(60*24*7)
+      if( global.UM=="weeks" ) tmpQWE[,"-X"] <- as.numeric(tmpQWE[,"-X"])/(60*24*7)
+      if( global.UM=="months" ) tmpQWE[,"--X"] <- as.numeric(tmpQWE[,"--X"])/(60*24*7*30)
+      if( global.UM=="months" ) tmpQWE[,"-X"] <- as.numeric(tmpQWE[,"-X"])/(60*24*7*30)    
+      tmpQWE[,"-X"][which(is.na(tmpQWE[,"-X"]))] <- ""
+      tmpQWE[,"--X"][which(is.na(tmpQWE[,"--X"]))] <- ""
+      
+      if( operator == "->" ) {
+        if( conditionOnTime == TRUE ) {
+          ret <- as.numeric(tmpQWE[,"-X"][tmpQWE[,"-X"]!=""])
+        } else {
+          ret <- as.numeric(tmpQWE[,"->"])
+        }
+        # browser()
       }
-      browser()
+      if( operator == "-->" ) {
+        if( conditionOnTime == TRUE ) {
+          ret <- !is.na(as.numeric(tmpQWE[,"--X"]))
+        } else {
+          ret <- as.numeric(tmpQWE[,"-->"])
+        }
+        # browser()
+      }    
+    } else {
+      ret <- NA
     }
-    if( operator == "-->" ) {
-      if( conditionOnTime == TRUE ) {
-        ret <- !is.na(as.numeric(tmpQWE[,"-->(t)"]))
-      } else {
-        ret <- as.numeric(tmpQWE[,"-->"])
-      }
-      browser()
-    }    
+    
+        # browser()
+    return( list( "res" = tmpQWE, "ret" = ret ) )
           
   }
   #=================================================================================
