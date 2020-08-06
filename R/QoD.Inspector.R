@@ -338,11 +338,13 @@ QoDInspector <- function( UM = "" ) {
       tmpQWE[,"-X"][which(is.na(tmpQWE[,"-X"]))] <- ""
       tmpQWE[,"--X"][which(is.na(tmpQWE[,"--X"]))] <- ""
       
+      # browser()
+      
       if( operator == "->" ) {
         if( conditionOnTime == TRUE ) {
           ret <- as.numeric(tmpQWE[,"-X"][tmpQWE[,"-X"]!=""])
         } else {
-          ret <- as.numeric(tmpQWE[,"->"])
+          ret <- suppressWarnings(as.numeric(tmpQWE[,"->"]))
         }
         # browser()
       }
@@ -350,7 +352,7 @@ QoDInspector <- function( UM = "" ) {
         if( conditionOnTime == TRUE ) {
           ret <- !is.na(as.numeric(tmpQWE[,"--X"]))
         } else {
-          ret <- as.numeric(tmpQWE[,"-->"])
+          ret <- suppressWarnings(as.numeric(tmpQWE[,"-->"]))
         }
         # browser()
       }    
@@ -361,6 +363,63 @@ QoDInspector <- function( UM = "" ) {
         # browser()
     return( list( "res" = tmpQWE, "ret" = ret ) )
           
+  }
+  strParser.all <- function( ID , query , evt.sequence ) {
+    
+    rules <- c( "->" = "[ ']*[a-zA-Z_ ]+[ ']*(->)[ ']*[a-zA-Z_ ]+[ ']*",
+                "-->" = "[ ']*[a-zA-Z_ ]+[ ']*(-->)[ ']*[a-zA-Z_ ]+[ ']*"
+    )
+
+    # Estrai i pezzi che soddisfano la regexp
+    stringa <- query
+    kkk <- unlist(lapply( 1:length(rules), function(i) { 
+      ret <- c()
+      ooo <- unique(str_trim(str_extract_all(stringa, rules[i])[[1]]))
+      for( k in ooo ) ret <- c(ret, c(k , names(rules)[i]))
+      return(ret)
+    }))
+    kkk <- matrix(kkk, ncol=2, byrow = T)
+    kkk <- cbind(kkk, rep("",nrow(kkk)))
+    colnames(kkk)<-c("rule","operator","value")
+    nuova.stringa <- stringa
+    
+    # ora risolvile una per una
+    for( riga in 1:nrow(kkk) ) {
+      risultato <- strAtomicSolver( ID, kkk[riga,1] , kkk[riga,2] , evt.sequence = evt.sequence  )
+      risultato$esito <- c("x") %in% risultato$res[,kkk[riga,2] ]
+
+      if( risultato$esito == TRUE)
+        nuova.stringa <- str_replace_all(string = str_replace_all(nuova.stringa,"'","`"),pattern = str_replace_all(kkk[riga,"rule"],"'","`"), "TRUE")
+      if( risultato$esito == FALSE)      
+        nuova.stringa <- str_replace_all(string = str_replace_all(nuova.stringa,"'","`"),pattern = str_replace_all(kkk[riga,"rule"],"'","`"), "FALSE")
+      
+    }
+    
+    res.parsato <- eval(expr = parse(text = nuova.stringa))
+    
+    return( 
+      list( "res.parsato" =  res.parsato,
+            "nuova.stringa" = nuova.stringa)
+      )
+  }
+  executeQuery <- function( query ) {
+    
+    arr.ID <- names(global.dataLoader$pat.process)
+    res <- list()
+    si <- c()
+    no <- c()
+    detail <- list()
+    for( ID in arr.ID ) {
+      evt.sequence <- global.dataLoader$pat.process[[ID]][[global.dataLoader$csv.EVENTName]]
+      res <- strParser.all( ID, query , evt.sequence = evt.sequence )
+      # browser()
+      if( res$res.parsato == TRUE ) si <- c( si , ID)
+      if( res$res.parsato == FALSE ) no <- c( no , ID)
+      detail[[ID]] <- res$nuova.stringa
+    }
+    
+    return( list(  "yes" = si, "no"=no, "detail"=detail) )
+    
   }
   #=================================================================================
   # getStats
@@ -405,7 +464,8 @@ QoDInspector <- function( UM = "" ) {
     "defineAlias"=defineAlias,
     "getStats"=getStats,
     "checkRule"=checkRule,
-    "checkPath"=checkPath
+    "checkPath"=checkPath,
+    "executeQuery"=executeQuery
   ) )
 }
 
