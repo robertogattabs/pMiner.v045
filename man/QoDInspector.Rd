@@ -4,7 +4,7 @@
 \alias{QoDInspector}
 \title{A quality of data inspector}
 \usage{
-QoDInspector()
+QoDInspector(UM = "")
 }
 \description{
 a QoD inspector class
