@@ -109,6 +109,7 @@ dataProcessor<-function() {
     MM<-matrix(0, ncol=length(unique(mydata[[EVENT.list.names]]))+2, nrow=length(unique(mydata[[EVENT.list.names]]))+2 )
     colnames(MM)<-c("BEGIN","END",unique(as.character(mydata[[EVENT.list.names]])))
     rownames(MM)<-colnames(MM)
+    # browser()
     if(("" %in% trimws(colnames(MM))) == TRUE) {
       return( list("error"=TRUE, "errCode"=1)  )
     }

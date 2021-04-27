@@ -67,7 +67,7 @@ careFlowMiner <- function() {
       
       if(length(col.dateFrom)>0) {
         lst.nodi[[id]]$activationDates <<- c( lst.nodi[[id]]$activationDates , col.dateFrom[i]) 
-        lst.nodi[[id]]$IPP <<- c( lst.nodi[[id]]$IPP , IPP )
+        lst.nodi[[id]]$IPP <<- unique(c( lst.nodi[[id]]$IPP , IPP ))
         if(length(col.dateTo)>0) {
           deltaTime <- difftime(as.Date(col.dateTo[i],format = attr.dateToFormat),as.Date(col.dateFrom[i],format = attr.date.format),units = "days")
           lst.nodi[[id]]$duration <<- c(lst.nodi[[id]]$duration , deltaTime)
@@ -126,8 +126,9 @@ careFlowMiner <- function() {
                         proportionalPenwidth=TRUE , default.arcColor = "Black",
                         arr.States.color=c(),
                         predictive.model = FALSE, predictive.model.outcome = "", predictive.model.skipNodeLabel = c(),
-                        preserve.topology = FALSE, set.to.gray = FALSE, set.to.gray.color= "WhiteSmoke") {
-    
+                        preserve.topology = FALSE, set.to.gray = FALSE, set.to.gray.color= "WhiteSmoke" , debug.it = FALSE,
+                        show.far.leaf = FALSE) {
+    # if( starting.ID == 10 ) browser()
     if( starting.ID != "root") {
       if( lst.nodi[[starting.ID]]$depth == depth | 
           ( predictive.model==TRUE & lst.nodi[[starting.ID]]$evento == predictive.model.outcome & preserve.topology == FALSE  ) ) {
@@ -143,7 +144,7 @@ careFlowMiner <- function() {
       set.to.gray <- TRUE
       default.arcColor <- set.to.gray.color
     }
-    
+    if(debug.it==TRUE) browser()
     # if( currentLevel > 4 ) browser()
     
     arrId2Jump <- names(which(MM[starting.ID,]!=""))
@@ -155,7 +156,7 @@ careFlowMiner <- function() {
     if( currentLevel == 0) {
       arr.nodi <- c(paste( c("'",starting.ID,"' [ label='",lst.nodi[[starting.ID]]$evento,"\n(",total.hits,")', penwidth=3]"),collapse = "" ))
     }
-    
+    # if(debug.it==TRUE) browser()
     num.outcome <- 0
     totaleSonHits <- 0
     totale <- lst.nodi[[starting.ID]]$hits
@@ -197,25 +198,88 @@ careFlowMiner <- function() {
             if( set.to.gray == TRUE) { fillColor <- set.to.gray.color } 
           }
         }
+        
+        if(debug.it==TRUE) browser()
         # if( lst.nodi[[son]]$evento == predictive.model.outcome ) browser()
         res <- plotCFGraph( depth = depth , starting.ID = son , currentLevel = currentLevel + 1, total.hits = total.hits,
                         default.arcColor = default.arcColor, arr.States.color = arr.States.color,
                         predictive.model = predictive.model, predictive.model.outcome = predictive.model.outcome, 
                         predictive.model.skipNodeLabel = predictive.model.skipNodeLabel,
                         preserve.topology = preserve.topology, set.to.gray = set.to.gray,
-                        set.to.gray.color = set.to.gray.color)
+                        set.to.gray.color = set.to.gray.color , debug.it = debug.it,
+                        show.far.leaf = show.far.leaf)
+        
+        
+        # nodo.partenza <- lst.nodi[[starting.ID]]$depth + 1
+        # quanti.eventi.finali <- sum(unlist(lapply(lst.nodi[[starting.ID]]$IPP , function(IPP) {
+        #     sequenza <- c()
+        #     if( length(loadedDataset$wordSequence.raw[[IPP]]) >= nodo.partenza) {
+        #       sequenza <- loadedDataset$wordSequence.raw[[IPP]][nodo.partenza:length(loadedDataset$wordSequence.raw[[IPP]])] 
+        #     }
+        #     if( predictive.model.outcome %in% sequenza) return(1)
+        #     return(0)
+        # })))
+        # nodo.partenza <- lst.nodi[[son]]$depth + 1
+        nodo.partenza <- lst.nodi[[son]]$depth
+        quanti.eventi.finali <- sum(unlist(lapply(unique(lst.nodi[[son]]$IPP) , function(IPP) {
+          sequenza <- c()
+          if( length(loadedDataset$wordSequence.raw[[IPP]]) >= nodo.partenza) {
+            sequenza <- loadedDataset$wordSequence.raw[[IPP]][nodo.partenza:length(loadedDataset$wordSequence.raw[[IPP]])] 
+          }
+          if( predictive.model.outcome %in% sequenza) return(1)
+          return(0)
+        })))   
+        if( lst.nodi[[son]]$evento == predictive.model.outcome ) quanti.eventi.finali <- lst.nodi[[son]]$hits
         
         if( predictive.model == FALSE) {
           riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n(",sonHits,")' ,  fillcolor = ",fillColor," , style = filled]"),collapse = "" )
           riga.archi <- paste( c("'",starting.ID,"'->'",son,"' [label='",arcLabel,"', color = ",arcColor,", penwidth = ",penwidth,", arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
         } else{
           if(sonLabel %in% predictive.model.skipNodeLabel) {
-            riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n(",res$num.outcome,")' , color=",default.arcColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
+            totale.outcome <- res$num.outcome
+            totale.outcome <- quanti.eventi.finali
+            riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n(",totale.outcome,")' , color=",default.arcColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
           } else {
-            percentuale <- as.integer((res$num.outcome/res$sonHits)*100)
-            riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n(",res$num.outcome,"/",res$sonHits,": ",percentuale,"%)' , color=",default.arcColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
+            totale.outcome <- res$num.outcome
+            totale.outcome <- quanti.eventi.finali
+            percentuale <- as.integer((totale.outcome/res$sonHits)*100)
+            riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n(",totale.outcome,"/",res$sonHits,": ",percentuale,"%)' , color=",default.arcColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
           }
           riga.archi <- paste( c("'",starting.ID,"'->'",son,"' [label='",arcLabel,"', color = ",arcColor,", penwidth = ",penwidth,", arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
+        }
+
+        if( show.far.leaf & (lst.nodi[[son]]$depth == depth) & (lst.nodi[[son]]$evento != predictive.model.outcome) ) {
+          arr.ultimi <- unlist(lapply( lst.nodi[[son]]$IPP, function(IPP) {
+            return(tail(loadedDataset$pat.process[[IPP]][[ loadedDataset$csv.EVENTName ]],n=1))
+          } ) )
+          # browser()  
+          if( length(arr.ultimi) > 0) {
+            
+            colore.arco <- "grey"
+            if( set.to.gray == TRUE ) colore.arco <- set.to.gray.color
+            colore.arco <- "grey"
+            colore.nodo <- colore.arco
+            
+            
+            tabella.ultimi <- table(arr.ultimi)
+            names(tabella.ultimi) <- unlist(lapply( 1:nrow(tabella.ultimi), function(i) { paste(c( names(tabella.ultimi)[i] ,son),collapse = "_") }))
+            # ak47 <- unlist(lapply( 1:nrow(tabella.ultimi), function(i) { paste(c( names(tabella.ultimi)[i] ,son),collapse = "_") }))
+            for(i in 1:length(tabella.ultimi)) {
+              fillColor <- "White"
+              if(length(arr.States.color) > 0) {
+                if( names(table(arr.ultimi))[i] %in% names(arr.States.color)) {
+                  fillColor <- arr.States.color[ which(names(arr.States.color) == names(table(arr.ultimi))[i])  ]
+                  if( set.to.gray == TRUE) { fillColor <- set.to.gray.color } 
+                }
+              }
+              
+              tmp.str <- paste( c("'",son,"'->'",names(tabella.ultimi)[i],"' [style='dashed', label='', color = '",colore.arco <- "grey","', penwidth = 0.8, arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
+              arr.archi <- c( arr.archi , tmp.str)
+              # browser()
+              tmp.str <- paste( c("'",names(tabella.ultimi)[i],"' [ label='",names(table(arr.ultimi))[i],"\n(",tabella.ultimi[i],"/",res$sonHits,")' , color='",colore.nodo,"', fillcolor = '",fillColor,"' , style = filled]"),collapse = "" )
+              arr.nodi <- c( arr.nodi , tmp.str )
+            }
+          }
         }
         
         arr.nodi <- c( arr.nodi , riga.nodi )
@@ -261,12 +325,17 @@ careFlowMiner <- function() {
   }
   
   plotCFGraphComparison <- function( stratifyFor , stratificationValues, depth = 4, fisher.threshold = 0.1,
-                               arr.States.color=c("Deces"="Red","intensive care"="Orange","Recovered"="YellowGreen") ) {
+                                     checkDurationFromRoot = FALSE, 
+                                     hitsMeansReachAGivenFinalState = FALSE, finalStateForHits = c(),
+                               arr.States.color=c("Deces"="Red","intensive care"="Orange","Recovered"="YellowGreen"), 
+                               debug.it = F, show.far.leaf = FALSE ) {
     
     # stratificationValues <- c(1,2)
     b <- plot.comparison( stratifyFor = stratifyFor, stratificationValues = stratificationValues, depth = depth,
-                          fisher.threshold = fisher.threshold,
-                          arr.States.color=arr.States.color, set.to.gray = FALSE , set.to.gray.color= "WhiteSmoke")
+                          fisher.threshold = fisher.threshold, checkDurationFromRoot = checkDurationFromRoot,
+                          hitsMeansReachAGivenFinalState = hitsMeansReachAGivenFinalState, finalStateForHits = finalStateForHits,
+                          arr.States.color=arr.States.color, set.to.gray = FALSE , set.to.gray.color= "WhiteSmoke",
+                          debug.it = debug.it, show.far.leaf = show.far.leaf)
     return(b)
   }
   compare.array <- function( a, b ) {
@@ -287,19 +356,23 @@ careFlowMiner <- function() {
   }
   
   plot.comparison <- function( stratifyFor, stratificationValues, 
-                               fisher.threshold = 0.1, 
+                               fisher.threshold = 0.1, checkDurationFromRoot = FALSE,
+                               hitsMeansReachAGivenFinalState = FALSE, finalStateForHits = c(),
                                starting.ID = "root", sequenza =c("root") , currentLevel = 0, 
                                depth = 4, arr.States.color=c(), GraphFontsize = "9" ,
-                               set.to.gray = FALSE , set.to.gray.color= "WhiteSmoke") {
+                               set.to.gray = FALSE , set.to.gray.color= "WhiteSmoke", 
+                               debug.it = F, show.far.leaf = FALSE) {
     
     IDName <- loadedDataset$csv.IDName; EventName <- loadedDataset$csv.EVENTName
     decoded.seq <- sequenza[ which(sequenza!="root")]
     if( length(decoded.seq) > 0 ) {
       decoded.seq <- unlist(lapply( 1:length(decoded.seq), function(i) { lst.nodi[[decoded.seq[[i]]]]$evento } ))      
     }
-    
+    # browser()
     if( lst.nodi[[starting.ID]]$depth == depth ) {
       # browser()
+      if( debug.it == TRUE)  browser()
+      
       first.ID <- unique(loadedDataset$original.CSV[[IDName]][  which(loadedDataset$original.CSV[[stratifyFor]]==stratificationValues[1]) ])
       second.ID <-unique(loadedDataset$original.CSV[[IDName]][  which(loadedDataset$original.CSV[[stratifyFor]]==stratificationValues[2]) ])
       
@@ -308,11 +381,14 @@ careFlowMiner <- function() {
       quanti.first <- sum( ID %in% first.ID)
       quanti.second <- sum( ID %in% second.ID)
       
-      # browser()
+      validi.first.ID <- ID[ID %in% first.ID]
+      validi.second.ID <- ID[ID %in% second.ID] 
       
       return(list("stringa.nodi"=c(),"stringa.archi"=c(),"script"="", "sonHits" = lst.nodi[[starting.ID]]$hits,
                   "first.hits" = quanti.first, "second.hits" = quanti.second ,
-                  "first.missed"= (length(first.ID)-length(quanti.first)), "second.missed"=(length(second.ID)-length(quanti.second))
+                  "first.ID" = validi.first.ID, "second.ID" = validi.second.ID, 
+                  "first.missed"= (length(first.ID)-length(quanti.first)), 
+                  "second.missed"=(length(second.ID)-length(quanti.second))
       ))
     }
     
@@ -351,34 +427,379 @@ careFlowMiner <- function() {
         res <- plot.comparison( stratifyFor = stratifyFor, stratificationValues = stratificationValues, 
                                 starting.ID = son, currentLevel = currentLevel + 1, sequenza = c(sequenza,son),
                                 GraphFontsize = GraphFontsize, fisher.threshold = fisher.threshold,
+                                checkDurationFromRoot = checkDurationFromRoot,
+                                hitsMeansReachAGivenFinalState = hitsMeansReachAGivenFinalState, finalStateForHits = finalStateForHits,
                                 depth = depth, arr.States.color = arr.States.color,
-                                set.to.gray = set.to.gray)
-        # if( set.to.gray == TRUE) browser()
-        matriceFisher <- matrix( c(res$first.hits, res$first.missed , res$second.hits , res$second.missed), byrow = F, ncol=2 )
+                                set.to.gray = set.to.gray, show.far.leaf = show.far.leaf)
         # browser()
+        matriceFisher <- matrix( c(res$first.hits, res$first.missed , res$second.hits , res$second.missed), byrow = F, ncol=2 )
+        wilcoxTest.p <- NA
+        if(checkDurationFromRoot == TRUE) {
+          if( length(res$first.ID) > 0 & length(res$second.ID) > 0 & starting.ID!="root") {
+            wilcoxTest.p <- suppressWarnings(wilcox.test( unlist(lapply( res$first.ID, function(IPP) { return( loadedDataset$pat.process[[IPP]]$pMineR.deltaDate[currentLevel+1] ) })),
+                                                          unlist(lapply( res$second.ID, function(IPP) { return( loadedDataset$pat.process[[IPP]]$pMineR.deltaDate[currentLevel+1] ) })))$p.value)
+            wilcoxTest.p <- as.numeric(format(wilcoxTest.p, digits = 3))
+          } else {
+            wilcoxTest.p <- 1
+          }
+        }
+        if( is.na(wilcoxTest.p) ) wilcoxTest.p <- 1
+        # cat("\n", son)
+        # if( son %in% c("0","1","9","37","2") ) browser()
         # cat("\n FT: ",sum(matriceFisher[1,])," - ", ((sum(matriceFisher[2,])*fisher.threshold)) )
-        if( sum(matriceFisher[1,]) > ((sum(matriceFisher[2,])*fisher.threshold)) ) { 
-          # browser()
-          p.value <- format(fisher.test(matriceFisher)$p.value,digits = 3)
-          fillColor <- "White"; 
-          borderColor <- "Black"
-          fontColor <- "Black"
-          arcColor <- "Black"
-          
-          if( p.value < 0.05) fillColor <- "Yellow";
-          if( p.value < 0.01) fillColor <- "Yellow";
+        if(checkDurationFromRoot == FALSE) {
+          if( sum(matriceFisher[1,]) > ((sum(matriceFisher[2,])*fisher.threshold)) ) { 
+            # browser()
+            p.value <- format(fisher.test(matriceFisher)$p.value,digits = 3)
+            fillColor <- "White"; 
+            borderColor <- "Black"
+            fontColor <- "Black"
+            arcColor <- "Black"
+            
+            if( p.value < 0.05) fillColor <- "Yellow";
+            if( p.value < 0.01) fillColor <- "Yellow";
+          } else {
+            p.value = "NA"
+            set.to.gray <- TRUE;
+            fillColor <- set.to.gray.color; 
+            borderColor <- "Gray"
+            fontColor <- "Gray"
+            arcColor <- "Gray"
+          }
         } else {
-          p.value = "NA"
-          set.to.gray <- TRUE;
-          fillColor <- set.to.gray.color; 
-          borderColor <- "Gray"
-          fontColor <- "Gray"
-          arcColor <- "Gray"
+          if( ((length(res$first.ID)+length(res$second.ID)) > 7) & length(res$first.ID)>3 & length(res$second.ID)>3 ) { 
+            # browser()
+            fillColor <- "White"; 
+            borderColor <- "Black"
+            fontColor <- "Black"
+            arcColor <- "Black"
+            
+            if( wilcoxTest.p < 0.05) fillColor <- "Yellow";
+            if( wilcoxTest.p < 0.01) fillColor <- "Yellow";
+            p.value <- wilcoxTest.p
+          } else {
+            p.value = "NA"
+            set.to.gray <- TRUE;
+            fillColor <- set.to.gray.color; 
+            borderColor <- "Gray"
+            fontColor <- "Gray"
+            arcColor <- "Gray"
+          }
+        }
+
+        if(checkDurationFromRoot == FALSE) {
+          if( hitsMeansReachAGivenFinalState == TRUE ) {
+            # if( son == "22") browser()
+            fillColor <- "White";
+            
+            morti.first <- sum(unlist(lapply( res$first.ID , function(IPP) {
+              return(finalStateForHits %in% loadedDataset$pat.process[[IPP]][  , loadedDataset$csv.EVENTName ])
+            })))
+            morti.second <- sum(unlist(lapply( res$second.ID , function(IPP) {
+              return(finalStateForHits %in% loadedDataset$pat.process[[IPP]][  , loadedDataset$csv.EVENTName ])
+            })))            
+            totali.first <- length(res$first.ID)
+            totali.second <- length(res$second.ID) 
+            bbb <- matrix( c(morti.first, totali.first, morti.second , totali.second ), nrow=2)
+            p.value.fisher <- fisher.test(bbb)$p.value
+
+            res$first.hits <- as.numeric(format(morti.first / totali.first,digits = 2))
+            res$second.hits <- as.numeric(format(morti.second / totali.second,digits = 2))
+
+            # res$first.hits <- morti.first
+            # res$second.hits <- morti.second
+            
+            p.value <- p.value.fisher
+            p.value <- format(p.value,digits = 3)
+
+            if( p.value < 0.05) fillColor <- "Yellow";
+
+            if( (morti.first + morti.second) < 10  ) {
+              p.value = "NA"
+              set.to.gray <- TRUE;
+              fillColor <- set.to.gray.color; 
+              borderColor <- "Gray"
+              fontColor <- "Gray"
+              arcColor <- "Gray"
+           }
+            
+          }
+          
+          ratio.hits <- format( (res$first.hits / res$second.hits) , digits = 2)
+          riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n",res$first.hits,"/",res$second.hits,"(",ratio.hits,")","\n p = ",p.value,"' ,  fontcolor = ",fontColor,", color = ",borderColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
+          riga.archi <- paste( c("'",starting.ID,"'->'",son,"' [label='",arcLabel,"', color = ",arcColor,", penwidth = ",penwidth,", arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
+        } else {
+          a <- unlist(lapply( res$first.ID, function(IPP) { return( loadedDataset$pat.process[[IPP]]$pMineR.deltaDate[currentLevel+1] ) }))
+          b <- unlist(lapply( res$second.ID, function(IPP) { return( loadedDataset$pat.process[[IPP]]$pMineR.deltaDate[currentLevel+1] ) }))
+          a <- as.integer(mean(a)/(60*24))
+          b <- as.integer(mean(b)/(60*24))
+          riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n",a,"/",b,"\n p = ",p.value,"' ,  fontcolor = ",fontColor,", color = ",borderColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
+          riga.archi <- paste( c("'",starting.ID,"'->'",son,"' [label='",arcLabel,"', color = ",arcColor,", penwidth = ",penwidth,", arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
+          
         }
         
-        riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n",res$first.hits,"/",res$second.hits,"\n p = ",p.value,"' ,  fontcolor = ",fontColor,", color = ",borderColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
-        riga.archi <- paste( c("'",starting.ID,"'->'",son,"' [label='",arcLabel,"', color = ",arcColor,", penwidth = ",penwidth,", arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
+        if( show.far.leaf & (lst.nodi[[son]]$depth == depth ) &
+            ( hitsMeansReachAGivenFinalState == FALSE ) &
+            ( checkDurationFromRoot == FALSE )) {
+          arr.ultimi <- unlist(lapply( lst.nodi[[son]]$IPP, function(IPP) {
+            return(tail(loadedDataset$pat.process[[IPP]][[ loadedDataset$csv.EVENTName ]],n=1))
+          } ) )
+          
+          arr.ultimi.first <- unlist(lapply( res$first.ID, function(IPP) {
+            return(tail(loadedDataset$pat.process[[IPP]][[ loadedDataset$csv.EVENTName ]],n=1))
+          } ) )
+          arr.ultimi.second <- unlist(lapply( res$second.ID , function(IPP) {
+            return(tail(loadedDataset$pat.process[[IPP]][[ loadedDataset$csv.EVENTName ]],n=1))
+          } ) )          
+          
+          colore.arco <- "grey"
+          if( set.to.gray == TRUE ) colore.arco <- set.to.gray.color
+          colore.arco <- "grey"
+          colore.nodo <- colore.arco
+          
+          tabella.ultimi.first <- table(arr.ultimi.first)
+          tabella.ultimi.second <- table(arr.ultimi.second)
         
+          arr.possibili.stati <- unique( c( names(tabella.ultimi.first),names(tabella.ultimi.second) ))
+          
+          for(i in 1:length(arr.possibili.stati)) {
+
+            if(  arr.possibili.stati[i] %in% names(tabella.ultimi.first) ) {
+              quanti.first <- tabella.ultimi.first[ arr.possibili.stati[i] ]
+            } else {
+              quanti.first <- 0
+            }
+            if(  arr.possibili.stati[i] %in% names(tabella.ultimi.second) ) {
+              quanti.second <- tabella.ultimi.second[ arr.possibili.stati[i] ]
+            } else {
+              quanti.second <- 0
+            }
+            
+            matriceFisher.leaf <- matrix( c(quanti.first, res$first.missed , quanti.second , res$second.missed), byrow = F, ncol=2 )
+            p.value <- "NA"
+            fillColor <- "White";
+            if(checkDurationFromRoot == FALSE) {
+              if( sum(matriceFisher.leaf[1,]) > ((sum(matriceFisher.leaf[2,])*fisher.threshold)) ) { 
+                # browser()
+                p.value <- format(fisher.test(matriceFisher.leaf)$p.value,digits = 3)
+                
+                if( p.value < 0.05) fillColor <- "Yellow";
+                if( p.value < 0.01) fillColor <- "Yellow";
+              } else {
+                p.value = "NA"
+                set.to.gray <- TRUE;
+              }
+            }
+            
+            nome.nodo.tmp <- paste(c(arr.possibili.stati[i],"_",son),collapse='')
+            
+            tmp.str <- paste( c("'",son,"'->'",nome.nodo.tmp,"' [style='dashed', label='', color = '",colore.arco <- "grey","', penwidth = 0.8, arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
+            arr.archi <- c( arr.archi , tmp.str)
+            tmp.str <- paste( c("'",nome.nodo.tmp,"' [ label='",arr.possibili.stati[i],"\n(",quanti.first ,"/",quanti.second,")\n p = ",p.value,"' , color='",colore.nodo,"', fillcolor = '",fillColor,"' , style = filled]"),collapse = "" )            
+            arr.nodi <- c( arr.nodi , tmp.str )
+          }
+          
+        }        
+
+        arr.nodi <- c( arr.nodi , riga.nodi )
+        arr.archi <- c( arr.archi , riga.archi)
+        
+        # if( res$num.outcome > 0 ) num.outcome <- num.outcome +  res$num.outcome
+        altri.nodi <- res$arr.nodi
+        altri.archi <- res$arr.archi 
+        
+        arr.nodi <- c( arr.nodi , altri.nodi)
+        arr.archi <- c( arr.archi , altri.archi)   
+        
+      }
+    }
+    # browser()
+    if( currentLevel == 0 ) {
+      script <- "
+          digraph boxes_and_circles {
+            graph [overlap = false, fontsize = ##GraphFontsize##, layout = neato]
+          
+            # several 'node' statements
+            node [shape = oval, fontname = Helvetica , fontsize = 9]
+            ##NodesPlaceholder##
+          
+            # several 'edge' statements
+            edge [ fontname = Helvetica]
+            ##ArcsPlaceholder##
+          }" 
+      NodesPlaceholder <- paste(arr.nodi,collapse = "\n")
+      ArcsPlaceholder <- paste(arr.archi,collapse = "\n")
+      script <- str_replace_all( script , "##NodesPlaceholder##", NodesPlaceholder )
+      script <- str_replace_all( script , "##ArcsPlaceholder##", ArcsPlaceholder )
+      script <- str_replace_all( script , "##GraphFontsize##", GraphFontsize )
+    }
+    # if(  length(arrId2Jump) == 0 ) {
+    #   if(lst.nodi[[starting.ID]]$evento == predictive.model.outcome) {
+    #     num.outcome <- lst.nodi[[starting.ID]]$hits
+    #   }
+    # }
+    # browser()
+    first.ID <- unique(loadedDataset$original.CSV[[IDName]][  which(loadedDataset$original.CSV[[stratifyFor]]==stratificationValues[1]) ])
+    second.ID <-unique(loadedDataset$original.CSV[[IDName]][  which(loadedDataset$original.CSV[[stratifyFor]]==stratificationValues[2]) ])
+    
+    ID <- getPatientWithSpecificedPath( decoded.seq )
+    
+    quanti.first <- sum( ID %in% first.ID)
+    quanti.second <- sum( ID %in% second.ID)
+    
+    validi.first.ID <- ID[ID %in% first.ID]
+    validi.second.ID <- ID[ID %in% second.ID]
+    # browser()
+    return(list("arr.nodi"=arr.nodi,"arr.archi"=arr.archi, "script"=script,"num.outcome" = num.outcome, 
+                "first.hits" = quanti.first, "second.hits" = quanti.second ,
+                "first.missed"= (length(first.ID)-length(quanti.first)), "second.missed"=(length(second.ID)-length(quanti.second)),
+                "first.ID" = validi.first.ID, "second.ID" = validi.second.ID,  
+                "sonHits"= totaleSonHits))
+  }
+  # The OLD ONE
+  old.plot.comparison <- function( stratifyFor, stratificationValues, 
+                               fisher.threshold = 0.1, checkDurationFromRoot = FALSE,
+                               starting.ID = "root", sequenza =c("root") , currentLevel = 0, 
+                               depth = 4, arr.States.color=c(), GraphFontsize = "9" ,
+                               set.to.gray = FALSE , set.to.gray.color= "WhiteSmoke", 
+                               debug.it = F) {
+    
+    IDName <- loadedDataset$csv.IDName; EventName <- loadedDataset$csv.EVENTName
+    decoded.seq <- sequenza[ which(sequenza!="root")]
+    if( length(decoded.seq) > 0 ) {
+      decoded.seq <- unlist(lapply( 1:length(decoded.seq), function(i) { lst.nodi[[decoded.seq[[i]]]]$evento } ))      
+    }
+    # browser()
+    if( lst.nodi[[starting.ID]]$depth == depth ) {
+      # browser()
+      if( debug.it == TRUE)  browser()
+      
+      first.ID <- unique(loadedDataset$original.CSV[[IDName]][  which(loadedDataset$original.CSV[[stratifyFor]]==stratificationValues[1]) ])
+      second.ID <-unique(loadedDataset$original.CSV[[IDName]][  which(loadedDataset$original.CSV[[stratifyFor]]==stratificationValues[2]) ])
+      
+      ID <- getPatientWithSpecificedPath( decoded.seq )
+      
+      quanti.first <- sum( ID %in% first.ID)
+      quanti.second <- sum( ID %in% second.ID)
+      
+      validi.first.ID <- ID[ID %in% first.ID]
+      validi.second.ID <- ID[ID %in% second.ID]      
+      
+      return(list("stringa.nodi"=c(),"stringa.archi"=c(),"script"="", "sonHits" = lst.nodi[[starting.ID]]$hits,
+                  "first.hits" = quanti.first, "second.hits" = quanti.second ,
+                  "first.ID" = validi.first.ID, "second.ID" = validi.second.ID, 
+                  "first.missed"= (length(first.ID)-length(quanti.first)), 
+                  "second.missed"=(length(second.ID)-length(quanti.second))
+      ))
+    }
+    
+    arrId2Jump <- names(which(MM[starting.ID,]!=""))
+    arr.nodi <- c()
+    arr.archi <- c()
+    script <- ""
+    fillColor <- "White"
+    arcLabel <- ""
+    arcColor <- "Black"
+    penwidth <- 0.5
+    arc.fontsize <- 10
+    if( set.to.gray == TRUE) { fillColor <- set.to.gray.color;  }
+    
+    if( currentLevel == 0) {
+      arr.nodi <- c(paste( c("'",starting.ID,"' [ label='",lst.nodi[[starting.ID]]$evento,"', penwidth=3]"),collapse = "" ))
+    }    
+    
+    num.outcome <- 0
+    totaleSonHits <- 0
+    # totale <- lst.nodi[[starting.ID]]$hits
+    
+    if( length(arrId2Jump) > 0 ) {
+      # totale <- sum(unlist(lapply( arrId2Jump, function(x) {lst.nodi[[x]]$hits} )))
+      # browser()
+      num.outcome <- 0
+      
+      for( son in arrId2Jump) {
+        sonLabel <- lst.nodi[[son]]$evento
+        sonHits <- lst.nodi[[son]]$hits
+        totaleSonHits <- totaleSonHits + sonHits
+        
+        # percentuale <- as.integer((sonHits/totale)*100)
+        # penwidth <- 5*(percentuale/100)+0.2
+        
+        res <- plot.comparison( stratifyFor = stratifyFor, stratificationValues = stratificationValues, 
+                                starting.ID = son, currentLevel = currentLevel + 1, sequenza = c(sequenza,son),
+                                GraphFontsize = GraphFontsize, fisher.threshold = fisher.threshold,
+                                checkDurationFromRoot = checkDurationFromRoot,
+                                depth = depth, arr.States.color = arr.States.color,
+                                set.to.gray = set.to.gray)
+        # browser()
+        matriceFisher <- matrix( c(res$first.hits, res$first.missed , res$second.hits , res$second.missed), byrow = F, ncol=2 )
+        wilcoxTest.p <- NA
+        if(checkDurationFromRoot == TRUE) {
+          if( length(res$first.ID) > 0 & length(res$second.ID) > 0 & starting.ID!="root") {
+            wilcoxTest.p <- suppressWarnings(wilcox.test( unlist(lapply( res$first.ID, function(IPP) { return( loadedDataset$pat.process[[IPP]]$pMineR.deltaDate[currentLevel+1] ) })),
+                                                          unlist(lapply( res$second.ID, function(IPP) { return( loadedDataset$pat.process[[IPP]]$pMineR.deltaDate[currentLevel+1] ) })))$p.value)
+            wilcoxTest.p <- as.numeric(format(wilcoxTest.p, digits = 3))
+          } else {
+            wilcoxTest.p <- 1
+          }
+        }
+        if( is.na(wilcoxTest.p) ) wilcoxTest.p <- 1
+        # cat("\n", son)
+        # if( son %in% c("0","1","9","37","2") ) browser()
+        # cat("\n FT: ",sum(matriceFisher[1,])," - ", ((sum(matriceFisher[2,])*fisher.threshold)) )
+        if(checkDurationFromRoot == FALSE) {
+          if( sum(matriceFisher[1,]) > ((sum(matriceFisher[2,])*fisher.threshold)) ) { 
+            # browser()
+            p.value <- format(fisher.test(matriceFisher)$p.value,digits = 3)
+            fillColor <- "White"; 
+            borderColor <- "Black"
+            fontColor <- "Black"
+            arcColor <- "Black"
+            
+            if( p.value < 0.05) fillColor <- "Yellow";
+            if( p.value < 0.01) fillColor <- "Yellow";
+          } else {
+            p.value = "NA"
+            set.to.gray <- TRUE;
+            fillColor <- set.to.gray.color; 
+            borderColor <- "Gray"
+            fontColor <- "Gray"
+            arcColor <- "Gray"
+          }
+        } else {
+          if( ((length(res$first.ID)+length(res$second.ID)) > 7) & length(res$first.ID)>3 & length(res$second.ID)>3 ) { 
+            # browser()
+            fillColor <- "White"; 
+            borderColor <- "Black"
+            fontColor <- "Black"
+            arcColor <- "Black"
+            
+            if( wilcoxTest.p < 0.05) fillColor <- "Yellow";
+            if( wilcoxTest.p < 0.01) fillColor <- "Yellow";
+            p.value <- wilcoxTest.p
+          } else {
+            p.value = "NA"
+            set.to.gray <- TRUE;
+            fillColor <- set.to.gray.color; 
+            borderColor <- "Gray"
+            fontColor <- "Gray"
+            arcColor <- "Gray"
+          }
+        }
+        
+        if(checkDurationFromRoot == FALSE) {
+          ratio.hits <- format( (res$first.hits / res$second.hits) , digits = 2)
+          riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n",res$first.hits,"/",res$second.hits,"(",ratio.hits,")","\n p = ",p.value,"' ,  fontcolor = ",fontColor,", color = ",borderColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
+          riga.archi <- paste( c("'",starting.ID,"'->'",son,"' [label='",arcLabel,"', color = ",arcColor,", penwidth = ",penwidth,", arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
+        } else {
+          a <- unlist(lapply( res$first.ID, function(IPP) { return( loadedDataset$pat.process[[IPP]]$pMineR.deltaDate[currentLevel+1] ) }))
+          b <- unlist(lapply( res$second.ID, function(IPP) { return( loadedDataset$pat.process[[IPP]]$pMineR.deltaDate[currentLevel+1] ) }))
+          a <- as.integer(mean(a)/(60*24))
+          b <- as.integer(mean(b)/(60*24))
+          riga.nodi <- paste( c("'",son,"' [ label='",sonLabel,"\n",a,"/",b,"\n p = ",p.value,"' ,  fontcolor = ",fontColor,", color = ",borderColor,", fillcolor = ",fillColor," , style = filled]"),collapse = "" )
+          riga.archi <- paste( c("'",starting.ID,"'->'",son,"' [label='",arcLabel,"', color = ",arcColor,", penwidth = ",penwidth,", arrowsize=0.8, fontsize = ",arc.fontsize,"]"),collapse = "" )
+          
+        }
         
         arr.nodi <- c( arr.nodi , riga.nodi )
         arr.archi <- c( arr.archi , riga.archi)
@@ -417,7 +838,7 @@ careFlowMiner <- function() {
     #     num.outcome <- lst.nodi[[starting.ID]]$hits
     #   }
     # }
-    
+    # browser()
     first.ID <- unique(loadedDataset$original.CSV[[IDName]][  which(loadedDataset$original.CSV[[stratifyFor]]==stratificationValues[1]) ])
     second.ID <-unique(loadedDataset$original.CSV[[IDName]][  which(loadedDataset$original.CSV[[stratifyFor]]==stratificationValues[2]) ])
     
@@ -425,12 +846,16 @@ careFlowMiner <- function() {
     
     quanti.first <- sum( ID %in% first.ID)
     quanti.second <- sum( ID %in% second.ID)
+    
+    validi.first.ID <- ID[ID %in% first.ID]
+    validi.second.ID <- ID[ID %in% second.ID]
     # browser()
     return(list("arr.nodi"=arr.nodi,"arr.archi"=arr.archi, "script"=script,"num.outcome" = num.outcome, 
                 "first.hits" = quanti.first, "second.hits" = quanti.second ,
                 "first.missed"= (length(first.ID)-length(quanti.first)), "second.missed"=(length(second.ID)-length(quanti.second)),
+                "first.ID" = validi.first.ID, "second.ID" = validi.second.ID,  
                 "sonHits"= totaleSonHits))
-  }
+  }  
   pathBeetweenStackedNodes <- function( fromState , toState, stratifyFor = "" , minPath = FALSE, stratificationValues , fisher.threshold = 0.1,
                                         kindOfGraph = "dot", arcColor = "black", arc.fontsize = 10, arc.fontcolor = "red",
                                         arr.States.color=c(), set.to.gray.color= "WhiteSmoke", p.value.threshold = 0.05 ) {
@@ -673,6 +1098,7 @@ careFlowMiner <- function() {
     "get.id"=get.id,
     "loadDataset"=loadDataset,
     "getDataStructure"=getDataStructure,
+    "getPatientWithSpecificedPath"=getPatientWithSpecificedPath,
     "plotCFGraph"=plotCFGraph,
     "plotCFGraphComparison"= plotCFGraphComparison,
     "pathBeetweenStackedNodes"=pathBeetweenStackedNodes
