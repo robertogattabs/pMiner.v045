@@ -815,7 +815,7 @@ EfirstOrderMarkovModel<-function( parameters.list = list() ) {
     global.personal.ID<<-paste( c(as.character(runif(1,1,100000)),as.character(runif(1,1,100000)),as.character(runif(1,1,100000))), collapse = '' )
   }
   getEFPTs <- function()  {
-    return (EFPTs) 
+    return(EFPTs) 
   }
     
   #===========================================================
