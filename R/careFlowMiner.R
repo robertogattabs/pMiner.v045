@@ -924,7 +924,8 @@ careFlowMiner <- function() {
         if(length(second.ricorrenza)==0) second.ricorrenza <- 0
         first.totale <- sum(first.kind.of.path)
         second.totale <- sum(second.kind.of.path)
-        piccolaM <- matrix(  c( first.ricorrenza , second.ricorrenza , first.totale , second.totale ), nrow=2 , byrow = T )
+        # browser()
+        piccolaM <- matrix(  c( first.ricorrenza , second.ricorrenza , (first.totale-first.ricorrenza) , (second.totale-second.ricorrenza) ), nrow=2 , byrow = T )
         p.value <- fisher.test(piccolaM)$p.value
         p.value <- format(p.value,digits = 3)
         

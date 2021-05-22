@@ -336,7 +336,8 @@ EfirstOrderMarkovModel<-function( parameters.list = list() ) {
   # findReacheableNodes
   # Funzione 
   #===========================================================
-  findReacheableNodes<-function( nodoDiPatenza = 'BEGIN'  ) {
+  findReacheableNodes<-function( startingNode = 'BEGIN'  ) {
+    nodoDiPatenza <- startingNode
     findReacheableNodes.recursiveLoop(
       nodoAttuale = nodoDiPatenza,
       nodi.raggiunti = c(nodoDiPatenza)
@@ -686,41 +687,45 @@ EfirstOrderMarkovModel<-function( parameters.list = list() ) {
     arr.nodi.con.archi <- c()
     stringaNodiComplessi<-''
     for(i in seq(1,nrow(MM))) {
-      listaNodiRiga<-listaNodi[which(MM[i,]>=threshold)]
-      if(length(listaNodiRiga)>0) {
-        for( ct in seq(1,length(listaNodiRiga))) {
-          
-          peso<-round(as.numeric(MM[i, listaNodiRiga[ct]]),digits = 2)
-          penwidth<- peso*3 + 0.01
-          if(penwidth<0.4) penwidth=0.4
-          fontSize = 5+peso*9
-          colore = as.integer(100-(30+peso*70))
-          if( type.of.graph == "overlapped") {
-            second.peso<-round(as.numeric(second.MM[i, listaNodiRiga[ct]]),digits = 2)
-            if( abs(peso - second.peso) >= threshold.second.MM ) {
-              delta.peso<-round(as.numeric((peso - second.peso)),digits = 2)
-              penwidth<- max(peso,abs(delta.peso))*3 + 0.01
-              fontSize = 5+max(peso,abs(delta.peso))*9
-              if(delta.peso>0) colore.delta.peso<-"Red"
-              else colore.delta.peso<-"Green"
-              if(peso > threshold | second.peso > threshold) {
-                stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",peso,"/",second.peso,"', style='dashed', fontcolor='",colore.delta.peso,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = ",colore.delta.peso,"]\n"), collapse = '')   
-                arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )
+      # if( !(rownames(MM)[i] %in% c("BEGIN","END") )) {
+        listaNodiRiga<-listaNodi[which(MM[i,]>=threshold)]
+        if(length(listaNodiRiga)>0) {
+          for( ct in seq(1,length(listaNodiRiga))) {
+            
+            peso<-round(as.numeric(MM[i, listaNodiRiga[ct]]),digits = 2)
+            penwidth<- peso*3 + 0.01
+            if(penwidth<0.4) penwidth=0.4
+            fontSize = 5+peso*9
+            colore = as.integer(100-(30+peso*70))
+            if( type.of.graph == "overlapped") {
+              second.peso<-round(as.numeric(second.MM[i, listaNodiRiga[ct]]),digits = 2)
+              if( abs(peso - second.peso) >= threshold.second.MM ) {
+                delta.peso<-round(as.numeric((peso - second.peso)),digits = 2)
+                penwidth<- max(peso,abs(delta.peso))*3 + 0.01
+                fontSize = 5+max(peso,abs(delta.peso))*9
+                if(delta.peso>0) colore.delta.peso<-"Red"
+                else colore.delta.peso<-"Green"
+                if(peso > threshold | second.peso > threshold) {
+                  stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",peso,"/",second.peso,"', style='dashed', fontcolor='",colore.delta.peso,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = ",colore.delta.peso,"]\n"), collapse = '')   
+                  arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )
+                }
+              } else{
+                if(peso > threshold) {
+                  stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",peso,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')   
+                  arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )                
+                }
               }
-            } else{
+            } else {
               if(peso > threshold) {
                 stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",peso,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')   
-                arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )                
+                arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )              
               }
             }
-          } else {
-            if(peso > threshold) {
-              stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",listaNodi[i],"'->'",listaNodiRiga[ct],"' [ label='",peso,"', penwidth='",penwidth,"' ,fontsize = '",fontSize,"', color = Gray",colore,"]\n"), collapse = '')   
-              arr.nodi.con.archi<-c(arr.nodi.con.archi,listaNodi[i],listaNodiRiga[ct] )              
-            }
           }
-        }
-      }
+        }        
+      # }
+
+      
     }
     
     listaNodiToPrint<-''
@@ -743,7 +748,9 @@ EfirstOrderMarkovModel<-function( parameters.list = list() ) {
       for(nomeRiga in rownames(cosa$EFPT.hasAlwaysAfter) ) {
         for(nomeColonna in colnames(cosa$EFPT.hasAlwaysAfter) ) {
           if( cosa$EFPT.hasAlwaysAfter[ nomeRiga , nomeColonna ] == ">>") {
-            stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",nomeRiga,"'->'",nomeColonna,"' [ label='>>', fontsize = '13', penwidth='",1,"', color = Blue]\n"), collapse = '')       
+            if( !(nomeColonna %in% c("BEGIN","END")) &  !(nomeRiga %in% c("BEGIN","END")) ) {
+              stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",nomeRiga,"'->'",nomeColonna,"' [ label='>>', fontsize = '13', penwidth='",1,"', color = Blue]\n"), collapse = '')             
+            }
           }
         }
       }
@@ -753,7 +760,9 @@ EfirstOrderMarkovModel<-function( parameters.list = list() ) {
       for(nomeRiga in rownames(cosa$EFPT.hasNeverAfter) ) {
         for(nomeColonna in colnames(cosa$EFPT.hasNeverAfter) ) {
           if( cosa$EFPT.hasNeverAfter[ nomeRiga , nomeColonna ] == "!>>") {
-            stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",nomeRiga,"'->'",nomeColonna,"' [ label='!>>', fontsize = '13', penwidth='",1,"', color = Red]\n"), collapse = '')       
+            if( !(nomeColonna %in% c("BEGIN","END")) &  !(nomeRiga %in% c("BEGIN","END")) ) {
+              stringaNodiComplessi<-paste(   c(stringaNodiComplessi, "'",nomeRiga,"'->'",nomeColonna,"' [ label='!>>', fontsize = '13', penwidth='",1,"', color = Red]\n"), collapse = '')        
+            }
           }
         }
       }
