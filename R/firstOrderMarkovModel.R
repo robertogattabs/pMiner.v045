@@ -475,7 +475,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
   #===========================================================
   plot.delta.graph<-function( objToCheck, threshold=0, type.of.graph="overlapped", 
                               threshold.4.overlapped=.3 ,giveBackGrViz = FALSE, 
-                              plotIt = TRUE, returnDeltaMatrix = FALSE) {
+                              plotIt = TRUE, returnDeltaMatrix = FALSE, layout = "dot", rankDirLR = FALSE) {
     
     if( type.of.graph != "overlapped" & type.of.graph !="delta") stop("\n Not yet implemented: err.cod. %43547g8fd")
     ext.MM <- objToCheck$getModel(kindOfOutput = "MMatrix.perc")
@@ -497,11 +497,11 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
     }
     
     if(type.of.graph=="delta")
-      grafo<-build.graph.from.table(MM = matrice, threshold = threshold) 
+      grafo<-build.graph.from.table(MM = matrice, threshold = threshold, layout = layout , rankDirLR = rankDirLR) 
     if(type.of.graph=="overlapped")
       grafo<-build.graph.from.table(MM = m.int, threshold = threshold, 
                                     second.MM = m.ext, 
-                                    threshold.second.MM = threshold.4.overlapped, type.of.graph = type.of.graph) 
+                                    threshold.second.MM = threshold.4.overlapped, type.of.graph = type.of.graph, layout = layout, rankDirLR = rankDirLR) 
     
     if(plotIt==TRUE)   grViz(grafo);
     if(returnDeltaMatrix==TRUE) return( list("matrix"=matrice,"m.int"=m.int,"m.ext"=m.ext) );
@@ -661,7 +661,7 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
   #===========================================================
   # build.graph.from.table
   #===========================================================
-  build.graph.from.table<-function(MM, threshold, second.MM = NA, threshold.second.MM=.2 , type.of.graph= "delta") {
+  build.graph.from.table<-function(MM, threshold, second.MM = NA, threshold.second.MM=.2 , type.of.graph= "delta" , layout = "dot", rankDirLR = FALSE) {
     
     if( type.of.graph != "overlapped" & type.of.graph !="delta") stop("\n Not yet implemented: err.cod. %43547g8fd")
     
@@ -775,11 +775,15 @@ firstOrderMarkovModel<-function( parameters.list = list() ) {
       else listaNodiToPrint <- paste( c(listaNodiToPrint," '",listaNodi[i],"'"), collapse=''    )
     }
     
+    if( rankDirLR == FALSE ) {direzione <- ""
+    }    else {
+      direzione <- ", rankdir = LR"
+    }
     # now plot it
     a<-paste(c("digraph boxes_and_circles {
                
                # a 'graph' statement
-               graph [overlap = true, fontsize = 10]
+               graph [overlap = true, fontsize = 10, layout = ",layout," ",direzione,"]
                
                # several 'node' statements
                node [shape = oval,
