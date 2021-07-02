@@ -1,14 +1,16 @@
 #' A class for a revisited Careflow Mining
 #'
 #' @description  This is an implementation of the Care Flow Mining algorithm, a bit revisited
+#' @import progress
 #' @export
 
-careFlowMiner <- function() {
+careFlowMiner <- function( verbose.mode = FALSE ) {
   lst.nodi <- list()
   MM <- c()
   IDD <- 0
   attr.dateToFormat <- ""
   attr.date.format <- ""
+  param.verbose<-''
   intGraph <- ""
   cmpStr <- list()
   loadedDataset <- list()
@@ -86,7 +88,13 @@ careFlowMiner <- function() {
     lst.nodi[[ "root" ]] <<- list("evento" = "root", "hits" = length(DLS$pat.process), "depth" = 0, "duration"=c())
     loadedDataset <<-  DLS
     
+    if(param.verbose == TRUE) pb <- txtProgressBar(min = 0, max = length(names(pat.process)), style = 3)
+    pb.ct <- 0
+    
     for( ID in names(DLS$pat.process) ) {
+      pb.ct <- pb.ct + 1;
+      if(param.verbose == TRUE) setTxtProgressBar(pb, pb.ct)
+      
       sequenza <- DLS$pat.process[[ID]][,DLS$csv.EVENTName]
       col.dateFrom <- DLS$pat.process[[ID]][,DLS$csv.dateColumnName]
       if(!is.na(dateToColumnName)) {
@@ -1081,18 +1089,19 @@ careFlowMiner <- function() {
   }
   
   
-  constructor <- function(  ) {
+  constructor <- function( verboseMode  ) {
     MM <<- matrix("",ncol=1, nrow=1)
     colnames(MM) <<- c("root")
     rownames(MM) <<- c("root")
     lst.nodi <<- list()
     attr.date.format <<- ""
     attr.dateToFormat <<- ""
+    param.verbose <<- verbose.mode
     intGraph <<- create_graph()
     cmpStr <<- list()
     loadedDataset <<- list()
   }
-  constructor()
+  constructor(verboseMode = verbose.mode)
   return(list(
     "add.node"=add.node,
     "add.path"=add.path,

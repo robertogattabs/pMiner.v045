@@ -2258,7 +2258,7 @@ confCheck_easy<-function( verbose.mode = TRUE ) {
       }
       # -fm (2)
       # -im 
-      cat("\n ID=",ID)
+      if(param.verbose == TRUE)  cat("\n ID=",ID)
       if( !(ID %in% names(res$list.computation.matrix$stati.timeline))) {
         toProcess <- FALSE; ID.skippati <- c( ID.skippati , ID ) 
       }
