@@ -130,13 +130,13 @@ careFlowMiner <- function( verbose.mode = FALSE ) {
   # ---------------------------------------------------------------   
   plotCFGraph <- function(  depth= 2 , starting.ID = "root", currentLevel = 0, total.hits = 0,
                         kindOfGraph = "twopi", GraphFontsize = "9" , 
-                        withPercentages = TRUE, relative.percentages = FALSE, 
+                        # withPercentages = TRUE, relative.percentages = FALSE, 
                         proportionalPenwidth=TRUE , default.arcColor = "Black",
                         arr.States.color=c(),
                         predictive.model = FALSE, predictive.model.outcome = "", predictive.model.skipNodeLabel = c(),
                         preserve.topology = FALSE, set.to.gray = FALSE, set.to.gray.color= "WhiteSmoke" , debug.it = FALSE,
                         show.far.leaf = FALSE) {
-    # if( starting.ID == 10 ) browser()
+    withPercentages <- TRUE; relative.percentages <- FALSE
     if( starting.ID != "root") {
       if( lst.nodi[[starting.ID]]$depth == depth | 
           ( predictive.model==TRUE & lst.nodi[[starting.ID]]$evento == predictive.model.outcome & preserve.topology == FALSE  ) ) {
